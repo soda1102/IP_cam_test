@@ -5,7 +5,7 @@ from flask import (
 )
 from datetime import datetime, timedelta
 
-from LMS.common import (
+from src.common import (
     Session,
     fetch_query, execute_query,
     log_system

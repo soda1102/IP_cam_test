@@ -1,10 +1,10 @@
 from math import ceil
 
 from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify
-from LMS.common import Session, login_required
-from LMS.common.db import fetch_query, execute_query
-from LMS.domain import Board
-from LMS.common.storage import upload_file
+from src.common import Session, login_required
+from src.common.db import fetch_query, execute_query
+from src.domain import Board
+from src.common.storage import upload_file
 
 board_bp = Blueprint('board_bp', __name__)
 

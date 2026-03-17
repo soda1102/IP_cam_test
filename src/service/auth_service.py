@@ -5,7 +5,7 @@ from flask import (
 )
 from datetime import date
 
-from LMS.common import (
+from src.common import (
     fetch_query, execute_query,
     log_system
 )

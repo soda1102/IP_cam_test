@@ -4,7 +4,7 @@ from flask import (
     render_template, redirect, url_for
 )
 
-from LMS.common import (
+from src.common import (
     fetch_query, execute_query,
     log_system,
     login_required

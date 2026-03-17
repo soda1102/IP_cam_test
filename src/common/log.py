@@ -1,5 +1,5 @@
 from flask import request, session
-from LMS.common.db import execute_query
+from src.common.db import execute_query
 import traceback
 
 def log_system(category, level, action, content=None):
