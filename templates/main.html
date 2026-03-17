@@ -4,22 +4,33 @@
 
 {% block extra_style %}
 <style>
-    /* --- 기존 main.html의 핵심 디자인 스타일 --- */
-    
-    /* Hero Section: 도로 배경 및 레이더 효과 */
+    /* --- Hero Section: 배경과 콘텐츠 분리형 --- */
     .hero-section {
-        background: linear-gradient(135deg, rgba(33, 37, 41, 0.9) 0%, rgba(32, 130, 138, 0.4) 100%),
-                    url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80');
-        background-size: cover;
-        background-position: center;
-        height: 650px;
+        height: 500px; /* 높이를 살짝 줄여 시원하게 배치 */
         display: flex;
-        align-items: center;
-        color: #fff;
+        align-items: center; /* 세로 중앙 정렬 */
+        justify-content: center;
         position: relative;
         overflow: hidden;
+        background-color: var(--dark-charcoal);
     }
 
+    /* [배경 이미지 레이어] */
+    .hero-bg-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            linear-gradient(135deg, rgba(33, 37, 41, 0.8) 0%, rgba(32, 130, 138, 0.4) 80%),
+            url("{{ url_for('static', filename='background_image.png') }}") no-repeat;
+        background-size: cover; /* 자동 자르기 핵심 */
+        background-position: center; /* 중앙 기준 */
+        z-index: 1;
+    }
+
+    /* [레이더 효과] */
     .hero-section::after {
         content: '';
         position: absolute;
@@ -30,17 +41,26 @@
         background: radial-gradient(circle, rgba(32, 130, 138, 0.3) 0%, rgba(32, 130, 138, 0) 70%);
         transform: translate(-50%, -50%);
         animation: pulse-radar 4s infinite;
+        z-index: 2;
+        pointer-events: none;
     }
     @keyframes pulse-radar { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-    .hero-content { position: relative; z-index: 10; text-align: center; width: 100%; }
-    .hero-title { font-weight: 800; font-size: 4rem; margin-bottom: 1.5rem; line-height: 1.2; }
-    .hero-title span { color: var(--primary-teal); }
-    .hero-subtitle { font-size: 1.4rem; margin-bottom: 2.5rem; opacity: 0.9; font-weight: 500; }
+    /* [콘텐츠 레이어] */
+    .hero-content {
+        position: relative;
+        z-index: 10;
+        text-align: center;
+        margin-top: 60px; /* 네비바와의 시각적 간격 확보 */
+    }
+    .hero-title { font-weight: 800; font-size: 3.8rem; margin-bottom: 1.5rem; line-height: 1.2; color: #fff; }
+    .hero-title span { color: var(--dark-charcoal); } /* 강조 텍스트 색상 */
+    .hero-subtitle { font-size: 1.4rem; margin-bottom: 2.5rem; opacity: 0.9; font-weight: 500; color: #fff; }
 
+    /* --- 버튼 및 카드 스타일 (기존 유지) --- */
     .btn-teal {
         background-color: var(--primary-teal);
-        color: #ffffff;
+        color: #fff;
         padding: 15px 40px;
         font-weight: 700;
         border-radius: 50px;
@@ -48,44 +68,28 @@
         transition: 0.3s;
         font-size: 1.1rem;
     }
-    .btn-teal:hover { 
-        background-color: #f4ebd0; 
-        color: var(--dark-charcoal); 
-        border-color: #f4ebd0; 
-        transform: translateY(-3px); 
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    .btn-teal:hover {
+        background-color: #f4ebd0;
+        color: var(--dark-charcoal);
+        border-color: #f4ebd0;
+        transform: translateY(-3px);
     }
 
-    /* Features 카드 스타일 */
     .feature-card {
         border: none;
         border-radius: 25px;
         transition: 0.3s;
         background: #fff;
         box-shadow: 0 15px 40px rgba(0,0,0,0.05);
-        padding: 30px;
-        position: relative;
-        overflow: hidden;
+        padding: 40px 30px;
     }
-    .feature-card::before {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 5px;
-        background-color: var(--primary-teal);
-        transform: scaleX(0);
-        transition: 0.3s;
-    }
-    .feature-card:hover::before { transform: scaleX(1); }
     .feature-card:hover { transform: translateY(-10px); box-shadow: 0 20px 50px rgba(32, 130, 138, 0.2); }
 
 <<<<<<< Updated upstream
     .icon-box {
         width: 80px;
         height: 80px;
-        background-color: rgba(32, 130, 138, 0.1);
+        background-color: var(--light-teal);
         color: var(--primary-teal);
         border-radius: 20px;
         display: flex;
@@ -93,10 +97,41 @@
         justify-content: center;
         font-size: 2.5rem;
         margin-bottom: 25px;
-        border: 1px solid rgba(32, 130, 138, 0.2);
+        margin-left: auto;
+        margin-right: auto;
     }
-    .card-title { font-weight: 800; font-size: 1.6rem; color: var(--dark-charcoal); }
-    .card-text { font-weight: 500; line-height: 1.6; }
+
+    /* --- 네비바 메뉴 호버 애니메이션 --- */
+    .nav-link {
+        font-weight: 600;
+        color: var(--dark-charcoal);
+        margin-right: 15px;
+        position: relative; /* 줄이 붙을 기준점 */
+        padding-bottom: 5px; /* 글자와 줄 사이 간격 */
+        transition: color 0.3s ease;
+    }
+
+    /* 1. 처음에는 보이지 않는 기본 줄 상태 */
+    .nav-link::after {
+        content: '';
+        position: absolute;
+        width: 0; /* 처음엔 길이가 0 (안 보임) */
+        height: 3px; /* 줄 두께 */
+        bottom: 0;
+        left: 0;
+        background-color: var(--primary-teal); /* 게이지 차오르는 색상 */
+        transition: width 0.3s ease; /* 0.3초 동안 부드럽게 길어짐 */
+    }
+
+    /* 2. 마우스를 올렸을 때(Hover) 게이지가 100% 차오름 */
+    .nav-link:hover {
+        color: var(--primary-teal);
+    }
+
+    .nav-link:hover::after {
+        width: 100%; /* 길이가 100%로 늘어남 */
+    }
+
 </style>
 {% endblock %}
 =======
@@ -145,42 +180,53 @@
 
 {% block content %}
     <header class="hero-section">
+        <div class="hero-bg-image"></div>
         <div class="container hero-content">
             <h1 class="hero-title">도로 위의 숨은 위험,<br>
-              <span style="background-color: #f4ebd0; color: #212529; padding: 0 10px; border-radius: 5px;">도(道)서관</span>이 먼저 읽습니다.</h1>
-            <button class="btn btn-teal">내 주행 리포트 확인하기</button>
+              <span style="background-color: #f4ebd0; padding: 0 10px; border-radius: 5px;">도(道)서관</span>이 먼저 읽습니다.</h1>
+            <p class="hero-subtitle">Unveiling the Hidden Risks on the Road, First.</p>
+            <button class="btn btn-teal">S T A R T</button>
         </div>
     </header>
 
-    <section class="container my-5 py-5">
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="feature-card text-center h-100">
-                    <div class="icon-box mx-auto">
-                        <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 11.5a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5v7zm-2-5.5a.5.5 0 0 0-.5-.5H6a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V6z"/></svg>
-                    </div>
-                    <h3 class="card-title">AI 위험 예보</h3>
-                    <p class="card-text text-muted">AI가 분석한 실시간 사고 다발 구역과 숨겨진 위험 요소를 지도에서 확인하세요.</p>
+    <section class="container py-5" style="position: relative; z-index: 20; margin-top: -10px; padding-bottom: 150px !important;">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="feature-card text-center h-100">
+                <div class="icon-box mx-auto">
+                    <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M5 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                        <path d="m2.165 15.803.02-.004c1.83-.363 2.948-.842 3.468-1.105C6.054 14.86 6.744 15 7.5 15c3.59 0 6.5-2.462 6.5-5.5S11.09 4 7.5 4a6.52 6.52 0 0 0-4.04 1.385C1.868 6.45 1 8.163 1 10c0 1.278.435 2.505 1.165 3.803Z"/>
+                    </svg>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-card text-center h-100">
-                    <div class="icon-box mx-auto">
-                        <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1-.5.5h-2v2a.5.5 0 0 1-1 0v-2h-2a.5.5 0 0 1 0-1h2v-2a.5.5 0 0 1 1 0v2h2a.5.5 0 0 1 .5.5z"/></svg>
-                    </div>
-                    <h3 class="card-title">운전자 커뮤니티</h3>
-                    <p class="card-text text-muted">도로 위 상황을 실시간으로 공유하고, 베테랑 운전자들의 노하우를 나눕니다.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-card text-center h-100">
-                    <div class="icon-box mx-auto">
-                        <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.652-.689-1.782-.886-3.112-.752-1.234.124-2.503.523-3.388.893V2.828zm7.5.752c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.885-.37-2.154-.769-3.388-.893-1.33-.134-2.458.063-3.112.752V3.58z"/></svg>
-                    </div>
-                    <h3 class="card-title">파일 자료실</h3>
-                    <p class="card-text text-muted">교통법규, 블랙박스 분석 자료 등 안전 운전을 위한 지식의 창고입니다.</p>
-                </div>
+                <h3 class="card-title mb-4">도(道)란도란</h3>
+                <p class="card-text text-muted">도로 위 위험 상황을 공유하고, 커뮤니티를 통해 베테랑 운전자들과 소통하세요.</p>
             </div>
         </div>
-    </section>
+
+        <div class="col-md-4">
+            <div class="feature-card text-center h-100">
+                <div class="icon-box mx-auto">
+                    <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3.854 2.146a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708L2 3.293l1.146-1.147a.5.5 0 0 1 .708 0m0 4a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708L2 7.293l1.146-1.147a.5.5 0 0 1 .708 0m0 4a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0"/>
+                    </svg>
+                </div>
+                <h3 class="card-title mb-4">도(道)움말</h3>
+                <p class="card-text text-muted">반드시 지켜야 할 주행 수칙과 사고 예방을 위한 주의 사항을 확인하세요.</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="feature-card text-center h-100">
+                <div class="icon-box mx-auto">
+                    <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.652-.689-1.782-.886-3.112-.752-1.234.124-2.503.523-3.388.893V2.828zm7.5.752c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.885-.37-2.154-.769-3.388-.893-1.33-.134-2.458.063-3.112.752V3.58z"/>
+                    </svg>
+                </div>
+                <h3 class="card-title mb-4">소개</h3>
+                <p class="card-text text-muted">프로젝트 개요, 로고, 홈페이지 소개 및 사용 방법을 확인하세요.</p>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

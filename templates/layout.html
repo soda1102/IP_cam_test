@@ -27,7 +27,7 @@
 
         /* --- Navbar 스타일 --- */
         .navbar { background-color: #fff; border-bottom: 5px solid var(--primary-teal); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .nav-link { font-weight: 600; color: var(--dark-charcoal); margin-right: 15px; font-size: 1.5rem; }
+        .nav-link { font-weight: 600; color: var(--dark-charcoal); margin-right: 15px; font-size: 1.1rem; }
         .nav-link:hover { color: var(--primary-teal); }
 
         /* --- 로고 옆 '도(道)서관' 글자 크기만 수정 --- */
@@ -64,33 +64,32 @@
     </style>
 </head>
 <body>
-
-<nav class="navbar navbar-expand-lg sticky-top py-3">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <img src="{{ url_for('static', filename='the_road_library_logo.png') }}" alt="로고" width="50" height="50" class="me-2">
-            <span class="fw-bold">도(道)서관</span>
-        </a>
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-            <ul class="navbar-nav gap-4">
-                <li class="nav-item dropdown">
-                    <a class="nav-link" href="#">소개</a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="/about#background">프로젝트 배경</a></li>
-                        <li><a class="dropdown-item" href="/about#logo">로고 소개</a></li>
-                        <li><a class="dropdown-item" href="/about#process">개발 과정</a></li>
-                        <li><a class="dropdown-item" href="/about#features">홈페이지 소개</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item"><a class="nav-link" href="#">도(道)와주세요</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">도(道)란도란</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">도움말</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">마이페이지</a></li>
-                <li class="nav-item"><a class="nav-link" href="/admin">관리자</a></li>
-            </ul>
+    <nav class="navbar navbar-expand-lg sticky-top py-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="/static/the_road_library_logo.png" alt="로고" width="60" height="60" class="me-2">
+                <span class="fw-bold">도(道)서관</span>
+            </a>
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+                <ul class="navbar-nav gap-4">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link" href="#">소개</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/about#background">프로젝트 배경</a></li>
+                            <li><a class="dropdown-item" href="/about#logo">로고 소개</a></li>
+                            <li><a class="dropdown-item" href="/about#process">개발 과정</a></li>
+                            <li><a class="dropdown-item" href="/about#features">홈페이지 소개</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="#">도(道)와주세요</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">도(道)란도란</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">도움말</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">마이페이지</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/admin">관리자</a></li>
+                </ul>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
     <main>
         {% block content %}{% endblock %}

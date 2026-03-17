@@ -1,4 +1,6 @@
 from dotenv import load_dotenv
+
+from LMS.service.BoardService import board_bp
 load_dotenv()
 
 # 기본 모듈
@@ -18,6 +20,7 @@ from LMS.service.AdminService import AdminService
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
+app.register_blueprint(board_bp, url_prefix='/board')
 
 # 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
