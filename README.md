@@ -30,7 +30,9 @@ pip install -r requirements.txt
 ```
 새로운 패키지 설치 후 pip freeze > requirements.txt를 실행하는 습관을 가져주세요!
 
+
 # 팀 내 코드 규칙(Convention, 코드 컨벤션)
+> ★★★★★ 반드시 이 부분을 필독해주세요.
 1. 서비스 파일명은 항상 `***_service.py`로 지어주세요.
 2. `html`을 만들 때 `templates/기능명` 디렉터리 안에 넣어주시고, 서비스파일에서 GET메서드 호출 시 render_template으로 불러올 때, `render_template('기능명/html파일명.html', ...)` 형태로 입력해주세요.
 3. `html` 파일에서 `img` 태그안에 src속성을 넣을 때 항상 `{{ url_for("static", filename="폴더명/파일명") }}` 형태로 넣어주세요. 
