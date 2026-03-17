@@ -30,7 +30,7 @@ class Board:
     @classmethod
     def from_db(cls, row: dict):
         if not row: return None
-        # db에 있ㄴ느 내용의 1줄을 dict 타입으로 가져와 객체로 만듬.
+        # db에 있는 내용의 1줄을 dict 타입으로 가져와 객체로 만듬.
         return cls(
             id=row.get('id'),
             title=row.get('title'),

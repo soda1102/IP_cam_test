@@ -11,6 +11,14 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY')
 def index():
     return render_template('main.html')
 
+@app.route('/member')
+def member():
+    return render_template('member.html')
+
+@app.route('/board')
+def board():
+    return render_template('board.html')
+
 if __name__ == '__main__':
     app.run(
         host='0.0.0.0',
