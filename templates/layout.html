@@ -60,6 +60,7 @@
         }
 
         {% block extra_style %}{% endblock %}
+
     </style>
 </head>
 <body>
@@ -67,7 +68,7 @@
 <nav class="navbar navbar-expand-lg sticky-top py-3">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="/">
-            <img src="/static/the_road_library_logo.png" alt="로고" width="65" height="65" class="me-2">
+            <img src="{{ url_for('static', filename='the_road_library_logo.png') }}" alt="로고" width="50" height="50" class="me-2">
             <span class="fw-bold">도(道)서관</span>
         </a>
         <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
