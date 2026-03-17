@@ -8,6 +8,9 @@ import os
 from flask_caching import Cache
 from flask import Flask, render_template, Blueprint, g
 
+# 공통 모듈
+from LMS.common import init_app
+
 # 서비스 모듈
 from LMS.service.MemberService import member_bp
 from LMS.service.AdminService import AdminService
@@ -23,6 +26,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 # Cache 설정
 cache = Cache(config={'CACHE_TYPE': 'simple'})
 cache.init_app(app)
+init_app(app)
 
 # 메인 페이지 라우트
 @app.route('/')
