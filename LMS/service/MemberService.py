@@ -126,9 +126,8 @@ def member_edit():
 
 # 마이페이지
 @member_bp.route('/mypage')
+@login_required
 def mypage():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
 
     # 1. 유저 정보 가져오기 (이때 profile_img 컬럼 데이터가 포함되어야 합니다)
     user = fetch_query("SELECT * FROM members WHERE id = %s", (session['user_id'],), one=True)
@@ -186,6 +185,7 @@ def profile_upload():
 
 # 마이페이지 - 작성한 게시물 조회
 @member_bp.route('/board/my', methods=['GET', 'POST'])
+@login_required
 def my_board_list() :
 
     if 'user_id' not in session :
