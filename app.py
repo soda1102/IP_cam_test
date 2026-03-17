@@ -42,7 +42,7 @@ def index():
 # TODO : app.py에 등록할 때 항상 url_prefix를 붙여서 넣기
 app.register_blueprint(member_bp, url_prefix='/member')
 app.register_blueprint(introduce_bp, url_prefix='/introduce')
-app.register_blueprint(admin_bp, url_prefix='/admin')
+# app.register_blueprint(admin_bp, url_prefix='/admin')
 
 
 @app.teardown_appcontext
