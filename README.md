@@ -14,18 +14,24 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-```bash
-1. 새로운 라이브러리 설치 및 반영
-Bash
+
+### 1. 새로운 라이브러리 설치 및 반영
+```Bash
 # 1. 모듈 설치
 pip install <모듈이름>
 
 # 2. 패키지 목록을 requirements.txt에 저장
 pip freeze > requirements.txt
-
-2. 프로젝트 의존성 일괄 설치
-Bash
-# 저장된 모든 라이브러리 설치
+```
+### 2. 의존성 라이브러리 일괄 설치
+```# 저장된 모든 라이브러리 설치
 pip install -r requirements.txt
+```
+
+### 3. 환경 변수(.env) 설정
+```Bash
+# 1. 프로젝트 루트 디렉토리에 .env 파일을 생성합니다.
+
+# 2. 노션 키파일에 공유된 .env파일을 root디렉토리에 생성
 ```
 새로운 패키지 설치 후 pip freeze > requirements.txt를 실행하는 습관을 가져주세요!

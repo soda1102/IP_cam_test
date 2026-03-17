@@ -276,6 +276,8 @@
         .badge-pending { background: rgba(243,156,18,0.12); color: var(--warning); }
         .badge-banned { background: rgba(231,76,60,0.12); color: var(--danger); }
         .badge-notice { background: rgba(32,130,138,0.12); color: var(--teal); }
+        .badge-warning { background: rgba(243,156,18,0.12); color: var(--warning); }
+        .badge-success { background: rgba(39,174,96,0.12); color: var(--success); }
         .badge-review { background: rgba(108,117,125,0.1); color: #555; }
         .badge-high { background: rgba(231,76,60,0.12); color: var(--danger); }
         .badge-medium { background: rgba(243,156,18,0.12); color: var(--warning); }
@@ -471,11 +473,13 @@
 <!-- ===== SIDEBAR ===== -->
 <aside class="sidebar">
     <div class="sidebar-logo">
+        <a href="/" style="display:flex; align-items:center; gap:12px; text-decoration:none;">
         <div class="logo-mark">🛣️</div>
         <div>
             <div class="brand-text">도(道)서관</div>
             <div class="brand-sub">ADMIN PANEL</div>
         </div>
+        </a>
     </div>
 
     <nav>
@@ -487,7 +491,9 @@
         <div class="sidebar-section-label">Management</div>
         <button class="nav-item" onclick="navigate('members', this)">
             <span class="nav-icon">👤</span> 회원 관리
-            <span class="nav-badge">24</span>
+            {% if new_members > 0 %}
+            <span class="nav-badge">{{ new_members }}</span>
+            {% endif %}
         </button>
         <button class="nav-item" onclick="navigate('posts', this)">
             <span class="nav-icon">💬</span> 게시글 관리
@@ -529,18 +535,18 @@
         <!-- ===== DASHBOARD ===== -->
         <div class="page active" id="page-dashboard">
             <div class="section-title">오늘의 현황</div>
-            <div class="section-sub">2025년 7월 17일 기준 실시간 집계</div>
+            <div class="section-sub" id="today-date"></div>
 
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">전체 회원</div>
                     <div class="stat-value">{{ members|length }}</div>
-                    <div class="stat-change up">↑ 오늘 +{{ new_today }}명</div>
+                    <div class="stat-change up">↑ 오늘 +{{ new_members }}명</div>
                 </div>
                 <div class="stat-card warning">
                     <div class="stat-label">신규 게시글</div>
-                    <div class="stat-value">87</div>
-                    <div class="stat-change up">↑ 어제 대비 +23%</div>
+                    <div class="stat-value">{{ boards|length }}</div>
+                    <div class="stat-change up">↑ 오늘 + {{ new_boards }}개</div>
                 </div>
                 <div class="stat-card danger">
                     <div class="stat-label">신고 접수</div>
@@ -634,24 +640,17 @@
 
         <!-- ===== MEMBERS ===== -->
         <!-- admin.html 회원 관리 탭 테이블 부분만 교체 -->
-<div class="tab-panel" id="tab-members">
-    <div class="page-hd"><h2>회원 관리</h2><p>전체 회원 목록 · 상태 변경 · 등급 조정</p></div>
-    <div class="fbar">
-        <input class="finput" type="text" placeholder="🔍 이름 또는 이메일 검색">
-        <select class="fsel">
-            <option>전체 상태</option>
-            <option>활성</option>
-            <option>비활성</option>
-        </select>
-        <select class="fsel">
-            <option>전체 등급</option>
-            <option>user</option>
-            <option>admin</option>
-        </select>
-        <button class="btn primary" onclick="openModal('member')">+ 추가</button>
+<div class="page" id="page-members">
+    <div class="section-title">회원 관리</div>
+    <div class="section-sub">전체 회원 목록 · 상태 변경 · 등급 조정</div>
+    <div class="filter-bar">
+        <input class="search-input" type="text" placeholder="🔍 이름 또는 이메일 검색">
+        <select class="filter-select">...</select>
+        <select class="filter-select">...</select>
+        <button class="topbar-btn primary" onclick="openModal('member')">+ 추가</button>
     </div>
     <div class="panel">
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -671,9 +670,11 @@
                     <td><strong>{{ member['name'] }}</strong></td>
                     <td>
                         {% if member['role'] == 'admin' %}
-                            <span class="badge b-teal">admin</span>
+                            <span class="badge badge-notice">도</span>
+                        {% elif member['role'] == 'manager' %}
+                            <span class="badge badge-warning">레</span>
                         {% else %}
-                            <span class="badge b-gray">user</span>
+                            <span class="badge badge-success">미</span>
                         {% endif %}
                     </td>
                     <td style="color:var(--muted)">{{ member['created_at'].strftime('%Y.%m.%d') }}</td>
@@ -685,8 +686,8 @@
                         {% endif %}
                     </td>
                     <td>
-                        <button class="btn sm" onclick="toast('✏️ 수정 모드')">수정</button>
-                        <button class="btn sm red" onclick="toast('🚫 정지 처리됨')">정지</button>
+                        <button class="action-btn" onclick="toast('✏️ 수정 모드')">수정</button>
+                        <button class="action-btn danger" onclick="toast('🚫 정지 처리됨')">정지</button>
                     </td>
                 </tr>
                 {% else %}
@@ -1138,6 +1139,13 @@
         document.getElementById('modal').classList.remove('open');
         showToast('✅ 저장되었습니다.');
     }
+    const today = new Date();
+    const formatted = today.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    document.getElementById('today-date').textContent = formatted + ' 기준 실시간 집계';
 </script>
 </body>
 </html>

@@ -1,22 +1,16 @@
-from flask import Blueprint
-from LMS.common.session import Session  # 기존 Session 그대로 활용
+from flask import Blueprint, render_template, request, flash, session, redirect, url_for
+from LMS.common.session import Session
 from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/')
-def get_members(cls):
-    conn = Session.get_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM members")
-            return cursor.fetchall()
-    except:
-        print("AdminService.get_members() 오류발생....")
-        return []
-    finally:
-        conn.close()
-
+def dashboard():
+    members = AdminService.get_members()
+    new_members = AdminService.get_today_new_members(members)
+    boards = AdminService.get_boards()
+    new_boards = AdminService.get_today_new_boards(boards)
+    return render_template('admin.html',members=members, new_members=new_members, boards=boards, new_boards=new_boards)
 
 class AdminService:
     @classmethod
