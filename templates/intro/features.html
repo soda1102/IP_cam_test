@@ -8,27 +8,26 @@
     .bg-section { padding: 80px 0; }
     .point-text { color: var(--primary-teal); font-weight: 700; }
 
-    /* --- [수정] 강조 카드: 배경색을 녹색(#20828A)으로, 글자를 하얀색으로 --- */
+    /* 강조 카드 */
     .accent-card {
         border-left: 5px solid #165e63;
-        background-color: #20828A;      /* 요청하신 녹색 계열 */
+        background-color: #20828A;
         padding: 40px;
         border-radius: 0 15px 15px 0;
         margin-bottom: 80px;
-        color: #ffffff;                 /* 글자색 하얀색 */
+        color: #ffffff;
     }
 
-    /* --- [추가] 도(道)서관 강조 박스: 배경 노란색(#fff5d7) --- */
+    /* 도(道)서관 강조 박스 */
     .highlight-box {
-        background-color: #fff5d7;      /* 요청하신 강조 색상 */
-        color: #212529;                 /* 박스 안 글자색은 어둡게 */
+        background-color: #fff5d7;
+        color: #212529;
         padding: 2px 10px;
         border-radius: 4px;
         margin: 0 4px;
         display: inline-block;
     }
 
-    /* 카드 내 일반 텍스트 투명도 조절로 세련미 추가 */
     .accent-card p {
         color: rgba(255, 255, 255, 0.9) !important;
     }
@@ -51,7 +50,7 @@
     .feature-icon-circle {
         width: 80px;
         height: 80px;
-        background-color: #e6f2f3; /* 연한 틸 배경 */
+        background-color: #e6f2f3;
         color: var(--primary-teal);
         border-radius: 50%;
         display: flex;
@@ -62,6 +61,11 @@
     }
 
     .lh-lg { line-height: 1.8; }
+
+    /* 섹션 간 간격 및 하단 여백 통일 */
+    .feature-section {
+        margin-bottom: 120px;
+    }
 </style>
 {% endblock %}
 
@@ -88,9 +92,8 @@
         <p class="text-muted">도(道)서관이 제공하는 세심한 안전 솔루션</p>
     </div>
 
-    <div class="row align-items-center mb-5 pb-5">
-        <div class="col-lg-6">
-            <div class="feature-icon-circle">
+    <div class="row align-items-center feature-section">
+        <div class="col-lg-6 pe-lg-5"> <div class="feature-icon-circle">
                 <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 11.5a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5v7zm-2-5.5a.5.5 0 0 0-.5-.5H6a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V6z"/></svg>
             </div>
             <h3 class="fw-bold mb-3">도(道)와주세요 <span class="text-muted fs-5">(Solution Archive)</span></h3>
@@ -109,24 +112,51 @@
         </div>
     </div>
 
-    <div class="row align-items-center flex-lg-row-reverse mb-5">
-        <div class="col-lg-6">
-            <div class="feature-icon-circle">
-                <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1-.5.5h-2v2a.5.5 0 0 1-1 0v-2h-2a.5.5 0 0 1 0-1h2v-2a.5.5 0 0 1 1 0v2h2a.5.5 0 0 1 .5.5z"/></svg>
+<div class="row align-items-center flex-lg-row-reverse feature-section">
+        <div class="col-lg-6 ps-lg-5 text-lg-end">
+            <div class="d-flex justify-content-lg-end">
+                <div class="feature-icon-circle">
+                    <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1-.5.5h-2v2a.5.5 0 0 1-1 0v-2h-2a.5.5 0 0 1 0-1h2v-2a.5.5 0 0 1 1 0v2h2a.5.5 0 0 1 .5.5z"/></svg>
+                </div>
             </div>
+
             <h3 class="fw-bold mb-3">도(道)란도란 <span class="text-muted fs-5">(Communication Hub)</span></h3>
             <p class="lh-lg text-primary fw-bold">"운전자의 생생한 목소리가 모이는 곳"</p>
             <p class="lh-lg">
                 '도란도란'은 길(道) 위에서 일어나는 소소한 이야기부터 실시간 교통 상황까지, <br>운전자들이 자유롭게 소통하는 커뮤니티 공간입니다.
             </p>
             <p class="lh-lg">
-                <span class="point-text">베테랑 운전자들의 노하우</span>를 배우고, 오늘 내가 겪은 도로 위의 상황을 이웃 운전자들과 나누어 보세요.
+                <span class="point-text">베테랑 운전자들의 노하우</span>를 배우고,<br> 오늘 내가 겪은 도로 위의 상황을 이웃 운전자들과 나누어 보세요.
             </p>
         </div>
+
         <div class="col-lg-6">
             <div class="img-placeholder shadow-sm">
                 <p class="fw-bold mb-1">[실시간 커뮤니티 활성화 이미지]</p>
                 <small>사용자 간 소통 및 노하우 공유 UI 예시</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row align-items-center feature-section">
+        <div class="col-lg-6 pe-lg-5">
+            <div class="feature-icon-circle">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2v13.5a.5.5 0 0 0 .74.439L8 13.069l5.26 2.87A.5.5 0 0 0 14 15.5V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
+            </div>
+            <h3 class="fw-bold mb-3">도(道)움말 <span class="text-muted fs-5">(Safety Guide Archive)</span></h3>
+            <p class="lh-lg text-success fw-bold">"베테랑 운전자도 놓치기 쉬운 상황별 안전 수칙"</p>
+            <p class="lh-lg">
+                도(道)움말은 도로 위에서 마주할 수 있는 다양한 위험 상황에 대비해, <br>꼭 알아두어야 할 <span class="point-text">핵심 안전 수칙</span>을 안내합니다.
+            </p>
+            <p class="lh-lg">
+                직관적인 <span class="point-text">포스터 이미지</span>와 함께 음주운전 금지, 안전벨트, 졸음운전 예방 등 <br>항목별 수칙을 토글 형식으로 제공하여 한눈에 확인하실 수 있습니다.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="shadow-sm overflow-hidden" style="border-radius: 15px;">
+                <img src="/static/img/safety_guide_archive.png"
+                     alt="안전 수칙 가이드 화면"
+                     class="img-fluid w-100 d-block">
             </div>
         </div>
     </div>
