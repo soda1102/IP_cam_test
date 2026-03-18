@@ -41,6 +41,10 @@ init_app(app)
 def index():
     return render_template('main.html')
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
 # Blueprint 등록
 # FIXME : app.py에 등록할 때 항상 url_prefix를 붙여서 넣기, 반드시 이 부분만 수정해주세요
 app.register_blueprint(auth_bp, url_prefix='/auth')
