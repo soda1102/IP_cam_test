@@ -4,7 +4,9 @@
             <img src="{{ url_for('static', filename='logo/the_road_library_logo.png') }}" alt="로고" width="60" height="60" class="me-2">
             <span class="fw-bold">도(道)서관</span>
         </a>
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="flex-grow-1"></div>
+
             <ul class="navbar-nav gap-4">
                 <li class="nav-item dropdown">
                     <a class="nav-link" href="#">소개</a>
@@ -18,7 +20,7 @@
                 <li class="nav-item"><a class="nav-link" href="#">도(道)와주세요</a></li>
                 <li class="nav-item"><a class="nav-link" href="/board/list">도(道)란도란</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">도움말</a></li>
-               <li class="nav-item dropdown">
+                <li class="nav-item dropdown">
                     <a class="nav-link" href="#">마이페이지</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="/mypage">회원 정보</a></li>
@@ -27,6 +29,33 @@
                 </li>
                 <li class="nav-item"><a class="nav-link" href="/admin">관리자</a></li>
             </ul>
+
+            <div class="d-flex align-items-center gap-3 flex-grow-1 justify-content-end">
+                {% if not session.get('user_id') %}
+                    <a href="/login" class="text-decoration-none text-muted small fw-medium">로그인</a>
+                    <a href="/signup" class="btn btn-sm text-white px-3 rounded-pill shadow-sm" style="background-color: var(--library-teal); font-size: 0.85rem;">
+                        회원가입
+                    </a>
+                {% else %}
+                    <div class="d-flex align-items-center bg-light px-3 py-1 rounded-pill border shadow-sm">
+                        {% if session.get('user_role') == 'admin' %}
+                            <span class="badge rounded-pill bg-danger me-2" style="font-size: 0.7rem;">관리자</span>
+                        {% else %}
+                            <span class="badge rounded-pill me-2" style="background-color: var(--library-teal); font-size: 0.7rem;">일반</span>
+                        {% endif %}
+
+                        <span class="small text-dark fw-bold">
+                            {{ session.get('user_name') }}<span class="fw-normal text-muted">님</span>
+                        </span>
+
+                        <div class="vr mx-3" style="height: 15px; margin-top: 3px;"></div>
+
+                        <a href="/logout" class="text-decoration-none text-danger small fw-medium" title="로그아웃">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </nav>
