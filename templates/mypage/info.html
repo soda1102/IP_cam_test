@@ -168,6 +168,32 @@
     .home-back { text-align: center; margin-top: 25px; }
     .home-back a { color: #888; text-decoration: none; font-size: 14px; }
     .home-back a:hover { color: #008080; }
+
+    /* 메뉴바 스타일 */
+    .edit-menu-layer {
+        position: absolute;
+        top: 45px;
+        right: 0;
+        width: 140px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        z-index: 100;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .edit-menu-layer div {
+        padding: 10px;
+        font-size: 13px;
+        color: #333;
+        text-align: center;
+        transition: background 0.2s;
+    }
+
+    .edit-menu-layer div:hover {
+        background-color: #f8f9fa;
+    }
 </style>
 {% endblock %}
 
@@ -186,17 +212,23 @@
                     <div class="profile-image-container">
                         <div class="profile-circle">
                             <img src="{{ user.profile_img if user.profile_img else url_for('static', filename='logo/the_road_library_logo.png') }}"
-                                 id="profileDisplay"
-                                 alt="프로필">
+                                 id="profileDisplay" alt="프로필">
                         </div>
-                        <div class="profile-edit-btn" onclick="clickInput()" style="cursor:pointer;" title="프로필 사진 수정">
+
+                        <div class="profile-edit-btn" onclick="toggleEditMenu(event)" style="cursor:pointer;" title="프로필 관리">
                             <i class="bi bi-pencil-fill"></i>
+
+                            <div id="editMenu" class="edit-menu-layer" style="display:none;">
+                                <div onclick="clickInput()">프로필 사진 변경</div>
+                                <div onclick="deleteProfile()" style="color: #ff4d4d; border-top: 1px solid #eee;">프로필 사진 삭제</div>
+                            </div>
                         </div>
 
                         <form id="profileForm" action="/mypage/profile/upload" method="POST" enctype="multipart/form-data">
-                            <input type="file" id="hiddenInput" name="profile_img" accept="image/*"
-                                   style="display:none;" onchange="submitProfile()">
+                            <input type="file" id="hiddenInput" name="profile_img" accept="image/*" style="display:none;" onchange="submitProfile()">
                         </form>
+
+                        <form id="deleteForm" action="/mypage/profile/delete" method="POST" style="display:none;"></form>
                     </div>
                     <div class="user-name">{{ user.name }}</div>
                     <div class="role-label">{{ user.role.upper() }} 계정</div>
@@ -248,11 +280,42 @@ function clickInput() {
     // 연필 아이콘 클릭 시 숨겨진 input 태그를 클릭함
     document.getElementById('hiddenInput').click();
 }
+
 function submitProfile() {
     const fileInput = document.getElementById('hiddenInput');
     if (fileInput.files && fileInput.files[0]) {
         // 파일을 선택하는 순간 바로 form을 서버로 전송
         document.getElementById('profileForm').submit();
+    }
+}
+
+// 메뉴 열기/닫기
+function toggleEditMenu(event) {
+    event.stopPropagation(); // 부모 클릭 이벤트 전파 방지
+    const menu = document.getElementById('editMenu');
+    menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
+}
+
+// 메뉴 바깥 클릭 시 닫기
+document.addEventListener('click', function() {
+    document.getElementById('editMenu').style.display = 'none';
+});
+
+function clickInput() {
+    document.getElementById('hiddenInput').click();
+}
+
+function submitProfile() {
+    const fileInput = document.getElementById('hiddenInput');
+    if (fileInput.files && fileInput.files[0]) {
+        document.getElementById('profileForm').submit();
+    }
+}
+
+// 삭제 확인 및 전송
+function deleteProfile() {
+    if (confirm("프로필 사진을 삭제하고 기본 이미지로 변경하시겠습니까?")) {
+        document.getElementById('deleteForm').submit();
     }
 }
 </script>

@@ -183,3 +183,20 @@ def profile_upload():
 
     except Exception as e:
         return f"<script>alert('오류 발생: {str(e)}');history.back();</script>"
+
+@mypage_bp.route('/profile/delete', methods=['POST'])
+@login_required
+def profile_delete():
+    user_id = session.get('user_id')
+
+    try:
+        # DB의 profile_img를 NULL(또는 빈 문자열)로 업데이트
+        sql = "UPDATE members SET profile_img = NULL WHERE id = %s"
+        execute_query(sql, (user_id,))
+
+        # 세션 정보도 초기화
+        session['user_profile'] = None
+
+        return "<script>alert('프로필 사진이 삭제되었습니다.'); location.href='/mypage/';</script>"
+    except Exception as e:
+        return f"<script>alert('삭제 중 오류 발생: {str(e)}'); history.back();</script>"
