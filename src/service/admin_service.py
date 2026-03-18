@@ -1,7 +1,8 @@
 from flask import (
     Blueprint,
     request, session, flash,
-    render_template, redirect, url_for
+    render_template, redirect, url_for,
+    jsonify
 )
 
 from datetime import datetime, timedelta
@@ -9,17 +10,31 @@ from datetime import datetime, timedelta
 from src.common import (
     Session,
     fetch_query, execute_query,
-    log_system
+    log_system,
+    admin_required
 )
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/')
+@admin_required
 def dashboard():
     members = AdminService.get_members()
     new_members = AdminService.get_today_new_members(members)
     boards = AdminService.get_boards()
     new_boards = AdminService.get_today_new_boards(boards)
-    return render_template('admin/admin.html',members=members, new_members=new_members, boards=boards, new_boards=new_boards)
+    report_count = sum(b['report_count'] for b in boards)
+
+    # 주간 게시글 집계 (오늘 기준 최근 7일)
+    week_counts = [0] * 7
+    today = datetime.now().date()
+    for b in boards:
+        diff = (today - b['created_at'].date()).days
+        if 0 <= diff <= 6:
+            week_counts[6 - diff] += 1  # 오늘이 맨 오른쪽
+
+    return render_template('admin/admin.html',
+                           members=members, new_members=new_members, boards=boards,
+                           new_boards=new_boards, report_count=report_count, week_counts=week_counts,today=today)
 
 @admin_bp.route('/member/delete/<int:member_id>', methods=['POST'])
 def delete_member(member_id):
@@ -93,7 +108,6 @@ def update_board(board_id):
 
 @admin_bp.route('/board/detail/<int:board_id>')
 def board_detail(board_id):
-    from flask import jsonify
     board = AdminService.get_board_detail(board_id)
     if not board:
         return jsonify({'error': '게시글 없음'}), 404

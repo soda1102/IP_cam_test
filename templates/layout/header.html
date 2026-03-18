@@ -25,7 +25,9 @@
                         <li><a class="dropdown-item" href="/introduce/logo">나의 활동</a></li>
                     </ul>
                 </li>
+                {% if session.get('role') == 'admin' %}
                 <li class="nav-item"><a class="nav-link" href="/admin">관리자</a></li>
+                {% endif %}
             </ul>
         </div>
     </div>

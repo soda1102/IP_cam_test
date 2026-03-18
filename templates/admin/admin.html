@@ -523,10 +523,15 @@
 
     <div class="sidebar-footer">
         <div class="admin-profile">
-            <div class="admin-avatar">관</div>
+            <div class="admin-avatar">{{ current_user_name[0] if current_user_name else '?' }}</div>
             <div class="admin-info">
-                <div class="name">최고 관리자</div>
-                <div class="role">Super Admin</div>
+                <div class="name">{{ current_user_name }}</div>
+                <div class="role">
+                    {% if current_user_role == 'admin' %}도(道)
+                    {% elif current_user_role == 'manager' %}레(레)
+                    {% else %}미(미)
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -562,9 +567,13 @@
                     <div class="stat-change up">↑ 오늘 + {{ new_boards }}개</div>
                 </div>
                 <div class="stat-card danger">
-                    <div class="stat-label">신고 접수</div>
-                    <div class="stat-value">3</div>
-                    <div class="stat-change down">처리 대기 중</div>
+                <div class="stat-label">신고 접수</div>
+                <div class="stat-value">{{ report_count }}</div>
+                {% if report_count > 0 %}
+                <div class="stat-change down">처리 대기 중</div>
+                {% else %}
+                <div class="stat-change" style="color:var(--success)">✓ 처리 완료</div>
+                {% endif %}
                 </div>
                 <div class="stat-card success">
                     <div class="stat-label">위험 구역 등록</div>
@@ -581,35 +590,21 @@
                         <span style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">최근 7일</span>
                     </div>
                     <div class="chart-area">
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:60px"><div class="bar-tooltip">월 · 52건</div></div>
-                            <span class="bar-label">월</span>
+                    {% set days = ['월','화','수','목','금','토','일'] %}
+                    {% set max_count = week_counts | max if week_counts | max > 0 else 1 %}
+                    {% for i in range(7) %}
+                    <div class="bar-wrap">
+                        <div class="bar"
+                             style="height:{{ (week_counts[i] / max_count * 150) | int }}px;
+                                    {% if i == 6 %}background:var(--teal);{% endif %}">
+                            <div class="bar-tooltip">
+                                {{ days[(today.weekday() - 6 + i) % 7] }} · {{ week_counts[i] }}건
+                            </div>
                         </div>
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:90px"><div class="bar-tooltip">화 · 78건</div></div>
-                            <span class="bar-label">화</span>
-                        </div>
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:70px"><div class="bar-tooltip">수 · 61건</div></div>
-                            <span class="bar-label">수</span>
-                        </div>
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:120px"><div class="bar-tooltip">목 · 104건</div></div>
-                            <span class="bar-label">목</span>
-                        </div>
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:100px"><div class="bar-tooltip">금 · 87건</div></div>
-                            <span class="bar-label">금</span>
-                        </div>
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:150px; background:var(--teal);"><div class="bar-tooltip">토 · 130건</div></div>
-                            <span class="bar-label">토</span>
-                        </div>
-                        <div class="bar-wrap">
-                            <div class="bar" style="height:130px"><div class="bar-tooltip">일 · 113건</div></div>
-                            <span class="bar-label">일</span>
-                        </div>
+                        <span class="bar-label">{{ days[(today.weekday() - 6 + i) % 7] }}</span>
                     </div>
+                    {% endfor %}
+                </div>
                 </div>
 
                 <!-- 최근 알림 -->
@@ -681,7 +676,7 @@
                     <th>등급</th>
                     <th>가입일</th>
                     <th>상태</th>
-                    <th>관리</th>
+                    <th style="width:160px;min-width:160px;">관리</th>
                 </tr>
             </thead>
             <tbody>
@@ -711,7 +706,7 @@
             <span class="badge badge-inactive">비활성</span>
         {% endif %}
     </td>
-    <td>
+    <td style="width:160px;min-width:160px;white-space:nowrap;">
         <button class="action-btn" onclick="openEditMemberModal(
             '{{ member['id'] }}',
             '{{ member['name'] }}',
@@ -768,7 +763,7 @@
                     <th>조회수</th>
                     <th>신고수</th>
                     <th>상태</th>
-                    <th>관리</th>
+                    <th style="width:200px;min-width:200px;">관리</th>
                 </tr>
             </thead>
             <tbody>
@@ -799,16 +794,16 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if not board['active'] %}
-                        <span class="badge badge-inactive">숨김</span>
+                {% if not board['active'] %}
+                    <span class="badge badge-inactive">숨김</span>
                     {% elif board['report_count'] > 0 %}
                         <span class="badge badge-banned">신고</span>
                     {% else %}
                         <span class="badge badge-active">정상</span>
                     {% endif %}
                 </td>
-                <td>
-                    {% if not board['active'] %}
+                <td style="width:220px;min-width:220px;white-space:nowrap;">
+                {% if not board['active'] %}
                         <button class="action-btn" onclick="openBoardDetail({{ board['id'] }})">상세</button>
                         <form method="POST" action="/admin/board/restore/{{ board['id'] }}" style="display:inline;">
                         <button type="submit" class="action-btn">복구</button>
@@ -1045,27 +1040,7 @@
         </form>
     </div>
 </div>
-<!-- ===== 공지 수정 모달 ===== -->
-<div class="modal-overlay" id="boardEditModal" onclick="closeBoardEditModal(event)">
-    <div class="modal-box">
-        <div class="modal-title">📌 공지 수정</div>
-        <form id="boardEditForm" method="POST">
-            <div class="modal-field">
-                <label class="modal-label">제목</label>
-                <input class="modal-input" type="text" name="title" id="board_edit_title" required>
-            </div>
-            <div class="modal-field">
-                <label class="modal-label">내용</label>
-                <textarea class="modal-input" name="content" id="board_edit_content"
-                          rows="6" style="resize:vertical;"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="topbar-btn" onclick="closeBoardEditModalDirect()">취소</button>
-                <button type="submit" class="topbar-btn primary">저장</button>
-            </div>
-        </form>
-    </div>
-</div>
+
 <!-- ===== 게시글 상세보기 모달 ===== -->
 <div class="modal-overlay" id="boardDetailModal" onclick="if(event.target===this)closeBoardDetail()">
     <div class="modal-box" style="width:580px;max-width:96vw;">
@@ -1087,7 +1062,7 @@
         <!-- 본문 -->
         <div id="detail_content"
              style="min-height:140px;max-height:320px;overflow-y:auto;
-                    white-space:pre-wrap;line-height:1.8;font-size:.9rem;
+                    line-height:1.8;font-size:.9rem;
                     font-weight:500;padding:16px 18px;
                     background:#f8fafa;border-radius:10px;
                     border:1px solid var(--border);">
@@ -1235,33 +1210,6 @@ function filterMembers() {
     });
 }
 
-    function openBoardEditModal(id, title, content) {
-    document.getElementById('boardEditForm').action = `/admin/board/update/${id}`;
-    document.getElementById('board_edit_title').value   = title;
-    document.getElementById('board_edit_content').value = content;
-    document.getElementById('boardEditModal').classList.add('open');
-}
-function closeBoardEditModal(e) {
-    if (e.target === document.getElementById('boardEditModal'))
-        document.getElementById('boardEditModal').classList.remove('open');
-}
-function closeBoardEditModalDirect() {
-    document.getElementById('boardEditModal').classList.remove('open');
-}
-
-    async function openBoardDetail(id) {
-    const res  = await fetch(`/admin/board/detail/${id}`);
-    const data = await res.json();
-
-    document.getElementById('detail_title').textContent      = data.title;
-    document.getElementById('detail_author').textContent     = data.author || '탈퇴회원';
-    document.getElementById('detail_created_at').textContent = data.created_at;
-    document.getElementById('detail_visits').textContent     = data.visits;
-    document.getElementById('detail_content').textContent    = data.content || '(내용 없음)';
-
-    document.getElementById('boardDetailModal').classList.add('open');
-}
-
 function closeBoardDetail() {
     document.getElementById('boardDetailModal').classList.remove('open');
 }
@@ -1274,7 +1222,7 @@ function closeBoardDetail() {
     document.getElementById('detail_author').textContent     = data.author || '탈퇴회원';
     document.getElementById('detail_created_at').textContent = data.created_at;
     document.getElementById('detail_visits').textContent     = data.visits;
-    document.getElementById('detail_content').textContent    = data.content || '(내용 없음)';
+    document.getElementById('detail_content').innerHTML    = data.content || '(내용 없음)';
 
     // 신고 이유
     const wrap = document.getElementById('detail_reports_wrap');
