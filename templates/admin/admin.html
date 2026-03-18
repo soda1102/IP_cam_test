@@ -466,6 +466,21 @@
         .risk-loc { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
         .risk-score { font-weight: 800; font-size: 1.1rem; }
 
+        /* ===== CONFIRM MODAL (삭제 확인) ===== */
+        .modal-box.sm {
+            width: 360px;
+            text-align: center;
+        }
+        .modal-box.sm .modal-title {
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+        .modal-confirm-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -497,7 +512,9 @@
         </button>
         <button class="nav-item" onclick="navigate('posts', this)">
             <span class="nav-icon">💬</span> 게시글 관리
-            <span class="nav-badge red">3</span>
+            {% if new_boards > 0 %}
+            <span class="nav-badge">{{ new_boards }}</span>
+            {% endif %}
         </button>
         <button class="nav-item" onclick="navigate('files', this)">
             <span class="nav-icon">📂</span> 파일 자료실
@@ -526,7 +543,6 @@
         <div class="topbar-title" id="topbar-title">📊 대시보드</div>
         <div class="topbar-actions">
             <button class="topbar-btn" onclick="showToast('🔔 알림이 없습니다.')">🔔 알림</button>
-            <button class="topbar-btn primary" onclick="openModal('add')">+ 새로 추가</button>
         </div>
     </div>
 
@@ -644,11 +660,20 @@
     <div class="section-title">회원 관리</div>
     <div class="section-sub">전체 회원 목록 · 상태 변경 · 등급 조정</div>
     <div class="filter-bar">
-        <input class="search-input" type="text" placeholder="🔍 이름 또는 이메일 검색">
-        <select class="filter-select">...</select>
-        <select class="filter-select">...</select>
-        <button class="topbar-btn primary" onclick="openModal('member')">+ 추가</button>
-    </div>
+    <input class="search-input" type="text" id="memberSearch" placeholder="🔍 이름 또는 이메일 검색" oninput="filterMembers()">
+    <select class="filter-select" id="filterRole" onchange="filterMembers()">
+        <option value="">전체 등급</option>
+        <option value="admin">도 (관리자)</option>
+        <option value="manager">레 (매니저)</option>
+        <option value="user">미 (일반)</option>
+    </select>
+    <select class="filter-select" id="filterActive" onchange="filterMembers()">
+        <option value="">전체 상태</option>
+        <option value="1">활성</option>
+        <option value="0">비활성</option>
+    </select>
+    <button class="topbar-btn primary" onclick="openModal('member')">+ 추가</button>
+</div>
     <div class="panel">
         <table class="data-table">
             <thead>
@@ -663,40 +688,50 @@
                 </tr>
             </thead>
             <tbody>
-                {% for member in members %}
-                <tr>
-                    <td style="color:var(--muted);font-size:.78rem">{{ member['id'] }}</td>
-                    <td>{{ member['uid'] }}</td>
-                    <td><strong>{{ member['name'] }}</strong></td>
-                    <td>
-                        {% if member['role'] == 'admin' %}
-                            <span class="badge badge-notice">도</span>
-                        {% elif member['role'] == 'manager' %}
-                            <span class="badge badge-warning">레</span>
-                        {% else %}
-                            <span class="badge badge-success">미</span>
-                        {% endif %}
-                    </td>
-                    <td style="color:var(--muted)">{{ member['created_at'].strftime('%Y.%m.%d') }}</td>
-                    <td>
-                        {% if member['active'] == 1 %}
-                            <span class="badge b-ok">활성</span>
-                        {% else %}
-                            <span class="badge b-bad">비활성</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button class="action-btn" onclick="toast('✏️ 수정 모드')">수정</button>
-                        <button class="action-btn danger" onclick="toast('🚫 정지 처리됨')">정지</button>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" style="text-align:center;color:var(--muted);padding:30px">
-                        등록된 회원이 없습니다.
-                    </td>
-                </tr>
-                {% endfor %}
+                <!-- 이렇게 수정 ✅ -->
+{% for member in members %}
+<tr data-name="{{ member['name'] }}"
+    data-uid="{{ member['uid'] }}"
+    data-role="{{ member['role'] }}"
+    data-active="{{ 1 if member['active'] else 0 }}">
+    <td style="color:var(--text-muted);font-size:.78rem">{{ member['id'] }}</td>
+    <td>{{ member['uid'] }}</td>
+    <td><strong>{{ member['name'] }}</strong></td>
+    <td>
+        {% if member['role'] == 'admin' %}
+            <span class="badge badge-notice">도</span>
+        {% elif member['role'] == 'manager' %}
+            <span class="badge badge-warning">레</span>
+        {% else %}
+            <span class="badge badge-success">미</span>
+        {% endif %}
+    </td>
+    <td style="color:var(--text-muted)">{{ member['created_at'].strftime('%Y.%m.%d') }}</td>
+    <td>
+        {% if member['active'] == 1 %}
+            <span class="badge badge-active">활성</span>
+        {% else %}
+            <span class="badge badge-inactive">비활성</span>
+        {% endif %}
+    </td>
+    <td>
+        <button class="action-btn" onclick="openEditMemberModal(
+            '{{ member['id'] }}',
+            '{{ member['name'] }}',
+            '{{ member['role'] }}',
+            {{ member['active'] }},
+            '{{ member['birthdate'] if member['birthdate'] else '' }}'
+        )">수정</button>
+        <button class="action-btn danger" onclick="openDeleteConfirm('{{ member['id'] }}', '{{ member['name'] }}')">활성여부</button>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">
+        등록된 회원이 없습니다.
+    </td>
+</tr>
+{% endfor %}
             </tbody>
         </table>
     </div>
@@ -1053,33 +1088,86 @@
     </div><!-- /content -->
 </div><!-- /main -->
 
-<!-- ===== MODAL ===== -->
-<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+<!-- ===== 회원 추가 모달 ===== -->
+<div class="modal-overlay" id="addMemberModal" onclick="closeAddModal(event)">
     <div class="modal-box">
-        <div class="modal-title" id="modal-title">항목 추가</div>
-        <div id="modal-body">
+        <div class="modal-title">👤 회원 추가</div>
+        <form id="addMemberForm" action="/admin/member/add" method="POST">
             <div class="modal-field">
-                <label class="modal-label">이름 / 제목</label>
-                <input class="modal-input" type="text" placeholder="입력하세요">
+                <label class="modal-label">UID</label>
+                <input class="modal-input" type="text" name="uid" placeholder="예: hong123" required>
             </div>
             <div class="modal-field">
-                <label class="modal-label">설명</label>
-                <input class="modal-input" type="text" placeholder="간단한 설명">
+                <label class="modal-label">이름</label>
+                <input class="modal-input" type="text" name="name" placeholder="예: 홍길동" required>
             </div>
             <div class="modal-field">
-                <label class="modal-label">카테고리</label>
-                <select class="modal-input">
-                    <option>선택하세요</option>
-                    <option>일반</option>
-                    <option>우선</option>
-                    <option>중요</option>
+                <label class="modal-label">비밀번호</label>
+                <input class="modal-input" type="password" name="password" placeholder="비밀번호 입력" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">생년월일 <span style="font-weight:400;color:var(--text-muted)">(선택)</span></label>
+                <input class="modal-input" type="date" name="birthdate">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="topbar-btn" onclick="closeAddModalDirect()">취소</button>
+                <button type="submit" class="topbar-btn primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ===== 회원 수정 모달 ===== -->
+<div class="modal-overlay" id="editMemberModal" onclick="closeEditModal(event)">
+    <div class="modal-box">
+        <div class="modal-title">✏️ 회원 정보 수정</div>
+        <form id="editMemberForm" method="POST">
+            <div class="modal-field">
+                <label class="modal-label">이름</label>
+                <input class="modal-input" type="text" name="name" id="edit_name" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">새 비밀번호 <span style="font-weight:400;color:var(--text-muted)">(변경 시에만 입력)</span></label>
+                <input class="modal-input" type="password" name="password" id="edit_password" placeholder="비워두면 변경 안 됨">
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">등급</label>
+                <select class="modal-input" name="role" id="edit_role">
+                    <option value="user">미 (일반)</option>
+                    <option value="manager">레 (매니저)</option>
+                    <option value="admin">도 (관리자)</option>
                 </select>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button class="topbar-btn" onclick="closeModalDirect()">취소</button>
-            <button class="topbar-btn primary" onclick="saveModal()">저장</button>
-        </div>
+            <div class="modal-field">
+                <label class="modal-label">상태</label>
+                <select class="modal-input" name="active" id="edit_active">
+                    <option value="1">활성</option>
+                    <option value="0">비활성</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">생년월일</label>
+                <input class="modal-input" type="date" name="birthdate" id="edit_birthdate">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="topbar-btn" onclick="closeEditModalDirect()">취소</button>
+                <button type="submit" class="topbar-btn primary">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== 삭제 확인 모달 ===== -->
+<div class="modal-overlay" id="deleteConfirmModal" onclick="closeDeleteModal(event)">
+    <div class="modal-box sm">
+        <div class="modal-title">🗑️ 활성화 변경</div>
+        <div class="modal-confirm-desc" id="delete-confirm-desc">이 회원을 변경하시겠습니까?<br>신중한 선택 바랍니다.</div>
+        <form id="deleteForm" method="POST">
+            <div class="modal-footer" style="justify-content:center;">
+                <button type="button" class="topbar-btn" onclick="closeDeleteModalDirect()">취소</button>
+                <button type="submit" class="topbar-btn"
+                    style="background:var(--danger);color:#fff;border-color:var(--danger);">변경 확인</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1115,30 +1203,20 @@
     }
 
     function openModal(type) {
-        const titles = {
-            add: '+ 새로 추가',
-            member: '👤 회원 추가',
-            file: '📂 파일 업로드',
-            risk: '⚠️ 위험 구역 추가'
-        };
-        document.getElementById('modal-title').textContent = titles[type] || '추가';
-        document.getElementById('modal').classList.add('open');
+    if (type === 'member') {
+        document.getElementById('addMemberModal').classList.add('open');
+        return;
+    }
+    }
+    // 회원 추가 모달 닫기 함수 추가
+    function closeAddModal(e) {
+        if (e.target === document.getElementById('addMemberModal'))
+            document.getElementById('addMemberModal').classList.remove('open');
+    }
+    function closeAddModalDirect() {
+        document.getElementById('addMemberModal').classList.remove('open');
     }
 
-    function closeModal(e) {
-        if (e.target === document.getElementById('modal')) {
-            document.getElementById('modal').classList.remove('open');
-        }
-    }
-
-    function closeModalDirect() {
-        document.getElementById('modal').classList.remove('open');
-    }
-
-    function saveModal() {
-        document.getElementById('modal').classList.remove('open');
-        showToast('✅ 저장되었습니다.');
-    }
     const today = new Date();
     const formatted = today.toLocaleDateString('ko-KR', {
         year: 'numeric',
@@ -1146,6 +1224,66 @@
         day: 'numeric'
     });
     document.getElementById('today-date').textContent = formatted + ' 기준 실시간 집계';
+
+    /* ===== 회원 수정 모달 ===== */
+    function openEditMemberModal(id, name, role, active, birthdate) {
+    document.getElementById('editMemberForm').action = `/admin/member/update/${id}`;
+    document.getElementById('edit_name').value      = name;
+    document.getElementById('edit_password').value  = '';
+    document.getElementById('edit_role').value      = role;
+    document.getElementById('edit_active').value    = String(active);
+    document.getElementById('edit_birthdate').value = birthdate;
+    document.getElementById('editMemberModal').classList.add('open');
+}
+function closeEditModal(e) {
+    if (e.target === document.getElementById('editMemberModal'))
+        document.getElementById('editMemberModal').classList.remove('open');
+}
+function closeEditModalDirect() {
+    document.getElementById('editMemberModal').classList.remove('open');
+}
+
+/* ===== 삭제 확인 모달 ===== */
+function openDeleteConfirm(id, name) {
+    document.getElementById('deleteForm').action = `/admin/member/delete/${id}`;
+    document.getElementById('delete-confirm-desc').innerHTML =
+        `<strong>${name}</strong> 회원을 변경하시겠습니까?<br>신중한 선택 바랍니다.`;
+    document.getElementById('deleteConfirmModal').classList.add('open');
+}
+function closeDeleteModal(e) {
+    if (e.target === document.getElementById('deleteConfirmModal'))
+        document.getElementById('deleteConfirmModal').classList.remove('open');
+}
+function closeDeleteModalDirect() {
+    document.getElementById('deleteConfirmModal').classList.remove('open');
+}
+
+    /* ===== 회원 필터링 ===== */
+function filterMembers() {
+    const search = document.getElementById('memberSearch').value.trim().toLowerCase();
+    const role   = document.getElementById('filterRole').value;
+    const active = document.getElementById('filterActive').value;
+
+    const rows = document.querySelectorAll('#page-members .data-table tbody tr');
+
+    rows.forEach(row => {
+        // data 속성 없는 tr은 그냥 스킵
+        if (row.dataset.role === undefined || row.dataset.active === undefined) {
+            return;
+        }
+
+        const rowName   = (row.dataset.name  || '').toLowerCase();
+        const rowUid    = (row.dataset.uid   || '').toLowerCase();
+        const rowRole   = (row.dataset.role  || '').trim();
+        const rowActive = String(row.dataset.active).trim();
+
+        const matchSearch = !search || rowName.includes(search) || rowUid.includes(search);
+        const matchRole   = !role   || rowRole   === role;
+        const matchActive = !active || rowActive === active;
+
+        row.style.display = (matchSearch && matchRole && matchActive) ? '' : 'none';
+    });
+}
 </script>
 </body>
 </html>
