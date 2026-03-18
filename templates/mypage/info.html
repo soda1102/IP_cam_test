@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}회원 정보{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    .info-body {
+        background-color: #F8F9FA;
+        padding: 50px 0;
+        min-height: 80vh;
+    }
+
+    /* 1. 사진과 버튼을 감싸는 부모 */
+    .profile-image-container {
+        position: relative;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+
+    /* 2. 상단 타이틀 컨테이너 */
+    .info-header-box {
+        max-width: 500px;
+        margin: 0 auto 20px auto;
+        background-color: #008080; /* 요청하신 청록색 */
+        color: #FFFFFF; /* 요청하신 흰색 글자 */
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    /* 3. 헤더 박스 */
+    .info-header-box h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+
+    /* 4. 메인 카드 설정 */
+    .info-card-container {
+        max-width: 500px;
+        margin: 0 auto;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        background-color: #FFFFFF;
+        overflow: hidden;
+    }
+
+    /* 5. 카드 내용 */
+    .info-card-content {
+        padding: 40px;
+    }
+
+    /* 6. 프로필 섹션 */
+    .profile-wrap {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    /* 7. 연필 버튼 */
+    .profile-edit-btn {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background-color: #FFFFFF;
+        border: 1px solid #008080;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #008080;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+
+    /* 호버 시 살짝 커지게 */
+    .profile-edit-btn:hover {
+        transform: scale(1.1);
+        color: #008080;
+    }
+
+    /* 아이콘 크기 조정 */
+    .profile-edit-btn i {
+        font-size: 18px;
+    }
+
+    .profile-circle {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 3px solid #008080;
+        padding: 5px;
+        display: inline-block;
+        background-color: #fff;
+        overflow: hidden;
+    }
+
+    .profile-circle img {
+    width: 100%;       /* 부모 너비인 120px에 맞춤 */
+    height: 100%;      /* 부모 높이에 맞춤 */
+    object-fit: cover; /* 비율 유지하며 꽉 채움 */
+    border-radius: 50%;/* 동그랗게 */
+    }
+
+    .user-name {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .role-label {
+        display: inline-block;
+        padding: 4px 15px;
+        border: 1.5px solid #008080;
+        border-radius: 20px;
+        color: #008080;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .detail-box {
+        background-color: #F9F9F9;
+        border-radius: 10px;
+        padding: 25px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #EDEDED;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+        margin-bottom: 15px; /* 버튼과의 간격 */
+    }
+
+    .detail-label { color: #555; font-size: 15px; }
+    .detail-value { font-weight: 600; color: #333; font-size: 15px; }
+
+    /* 회원 정보 수정 버튼 */
+    .edit-btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background-color: #fff;
+        border: 1px solid #008080;
+        color: #008080;
+        border-radius: 25px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .edit-btn:hover {
+        background-color: #008080;
+        color: #fff;
+    }
+
+    /* 5. 하단 홈 링크 */
+    .home-back { text-align: center; margin-top: 25px; }
+    .home-back a { color: #888; text-decoration: none; font-size: 14px; }
+    .home-back a:hover { color: #008080; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="info-body">
+    <div class="container">
+
+        <div class="info-header-box">
+            <h2>도(道)서관 회원 정보</h2>
+        </div>
+
+        <div class="info-card-container">
+            <div class="info-card-content">
+
+                <div class="profile-wrap">
+                    <div class="profile-image-container">
+                        <div class="profile-circle">
+                            <img src="{{ url_for('static', filename='logo/the_road_library_logo.png') }}" alt="프로필">
+                        </div>
+
+                        <a href="/mypage/profile/photo" class="profile-edit-btn" title="프로필 사진 수정">
+                            <i class="bi bi-pencil-fill"></i>
+                        </a>
+                    </div>
+                    <div class="user-name">{{ user.name }}</div>
+                    <div class="role-label">{{ user.role.upper() }} 계정</div>
+                </div>
+
+                <div class="detail-box">
+                    <div class="detail-row">
+                        <span class="detail-label">아이디</span>
+                        <span class="detail-value">{{ user.uid }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">가입 일자</span>
+                        <span class="detail-value">
+                            {% if user.created_at %}
+                            {{ user.created_at.strftime('%Y년 %m월 %d일') }}
+                            {% else %}
+                            정보 없음
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">권한</span>
+                        <span class="detail-value">{{ '관리자' if user.is_admin() else '일반 사용자' }}</span>
+                    </div>
+
+                    <a href="/mypage/edit" class="edit-btn">회원 정보 수정</a>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="home-back">
+            <a href="/">홈으로 돌아가기</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

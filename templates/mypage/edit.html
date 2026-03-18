@@ -1,34 +1,170 @@
 {% extends 'base.html' %}
 
+{% block title %}회원 정보 수정{% endblock %}
+
+{% block style %}
+<style>
+    .info-body {
+        background-color: #F8F9FA;
+        padding: 50px 0;
+        min-height: 80vh;
+    }
+
+    /* 1. 상단 타이틀 박스 (info.html과 동일) */
+    .info-header-box {
+        max-width: 500px;
+        margin: 0 auto 20px auto;
+        background-color: #008080;
+        color: #FFFFFF;
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .info-header-box h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+
+    /* 2. 메인 카드 설정 */
+    .info-card-container {
+        max-width: 500px;
+        margin: 0 auto;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        background-color: #FFFFFF;
+        overflow: hidden;
+    }
+
+    .info-card-content {
+        padding: 40px;
+    }
+
+    /* 3. 입력 폼 스타일링 */
+    .form-section {
+        background-color: #F9F9F9;
+        border-radius: 10px;
+        padding: 25px;
+    }
+
+    .form-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 8px;
+    }
+
+    /* 인풋 박스 디자인 커스텀 */
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #EAEAEA;
+        padding: 10px 15px;
+        font-size: 15px;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        border-color: #008080;
+        box-shadow: 0 0 0 0.2rem rgba(0, 128, 128, 0.1);
+    }
+
+    /* 읽기 전용 필드 (아이디) 스타일 */
+    .form-control[readonly] {
+        background-color: #F1F1F1;
+        color: #888;
+        cursor: not-allowed;
+    }
+
+    /* 4. 버튼 그룹 */
+    .btn-group-custom {
+        display: grid;
+        gap: 10px;
+        margin-top: 25px;
+    }
+
+    .btn-submit {
+        background-color: #008080;
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: background-color 0.3s;
+    }
+
+    .btn-submit:hover {
+        background-color: #006666;
+        color: white;
+    }
+
+    .btn-cancel {
+        background-color: #fff;
+        border: 1px solid #CCC;
+        color: #888;
+        padding: 12px;
+        border-radius: 25px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel:hover {
+        background-color: #F1F1F1;
+        color: #555;
+    }
+
+    .password-hint {
+        font-size: 12px;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
-        <div class="card shadow border-0">
-            <div class="card-header bg-dark text-white text-center">
-                <h4 class="mb-0">회원 정보 수정</h4>
-            </div>
-            <div class="card-body p-4">
+<div class="info-body">
+    <div class="container">
+
+        <div class="info-header-box">
+            <h2>회원 정보 수정</h2>
+        </div>
+
+        <div class="info-card-container">
+            <div class="info-card-content">
                 <form action="/mypage/edit" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">아이디 (변경 불가)</label>
-                        <input type="text" class="form-control bg-light" value="{{ user.uid }}" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">이름</label>
-                        <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">새 비밀번호</label>
-                        <input type="password" name="password" class="form-control" placeholder="변경 시에만 입력하세요">
-                        <div class="form-text text-danger">* 비밀번호를 입력하지 않으면 기존 비밀번호가 유지됩니다.</div>
-                    </div>
-                    <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">수정 완료</button>
-                        <a href="/mypage" class="btn btn-outline-secondary">취소</a>
+                    <div class="form-section">
+
+                        <div class="mb-4">
+                            <label class="form-label">아이디 (변경 불가)</label>
+                            <input type="text" class="form-control" value="{{ user.uid }}" readonly>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">이름</label>
+                            <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">새 비밀번호</label>
+                            <input type="password" name="password" class="form-control" placeholder="변경 시에만 입력하세요">
+                        </div>
+                        <p class="password-hint text-danger">
+                            <i class="bi bi-exclamation-circle"></i> 비밀번호 미입력 시 기존 비밀번호가 유지됩니다.
+                        </p>
+
+                        <div class="btn-group-custom">
+                            <button type="submit" class="btn btn-submit">수정 완료</button>
+                            <a href="/mypage" class="btn btn-cancel">취소</a>
+                        </div>
+
                     </div>
                 </form>
             </div>
         </div>
+
     </div>
 </div>
 {% endblock %}

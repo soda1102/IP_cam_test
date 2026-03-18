@@ -49,7 +49,7 @@ def logout():
 def signup():
     if request.method == 'GET':
         today_year = date.today().year
-        return render_template('auth/signup.html', year_now=today_year)
+        return render_template('auth/signup.html', year_now=today_year, name = session['name'], role = session['role'])
 
     uid = request.form.get('uid')
     password = request.form.get('password')

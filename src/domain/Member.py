@@ -2,13 +2,14 @@
 
 class Member:
 
-    def __init__(self, id, uid, pw, name, role="user", active=True):
+    def __init__(self, id, uid, pw, name, role="user", active=True, created_at=None):
         self.id = id  # DB의 PK -> AUTO_INCREMENT 자동번호 생성
         self.uid = uid  # 아이디
         self.pw = pw  # 비밀번호
         self.name = name  # 이름
         self.role = role  # 권한
         self.active = active  # 활성화 여부
+        self.created_at = created_at
         # 사용법
         # member = Member("kkw","1234","김기원","user")
         # Member객체를 member변수에 넣음
@@ -28,7 +29,8 @@ class Member:
             pw=row.get('password'),  # password : 1111
             name=row.get('name'),    # name : 김기원
             role=row.get('role'),    # role : admin
-            active=bool(row.get('active')) # active : 1 -> True
+            active=bool(row.get('active')), # active : 1 -> True
+            created_at = row.get('created_at')
         )
 
     def is_admin(self):   # role이 admin 인지 확인하는 메서드

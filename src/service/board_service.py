@@ -1,12 +1,13 @@
 from math import ceil
-
+import bleach
 from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify
 from src.common import Session, login_required
 from src.common.db import fetch_query, execute_query
 from src.domain import Board
 from src.common.storage import upload_file
+from bleach.css_sanitizer import CSSSanitizer
 
-board_bp = Blueprint('board_bp', __name__)
+board_bp = Blueprint('board', __name__)
 
 # 게시물 작성
 @board_bp.route('/write', methods=['GET', 'POST'])
@@ -22,8 +23,38 @@ def board_write():
     elif request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
-        # 세션에 저장된 로그인 유지의 id (member_id)
         member_id = session.get('user_id')
+
+        # 1. CSS 세정 객체 생성 (경고 해결의 핵심)
+        # 만약 여기서 에러가 나면 코드 맨 위에 임포트가 잘 되었는지 확인하세요!
+        allowed_styles = ['color', 'background-color', 'font-size', 'text-align', 'float', 'margin', 'padding']
+
+        try:
+            # 최신 방식
+            my_sanitizer = CSSSanitizer(allowed_styles = allowed_styles)
+        except NameError:
+            # 임포트 실패 시 안전을 위해 스타일 비허용 혹은 기본값 처리
+            my_sanitizer = None
+
+        # 2. 허용 태그 및 속성 설정
+        allowed_tags = [
+            'p', 'br', 'b', 'i', 'u', 'em', 'strong', 'span', 'img', 'a',
+            'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote', 'code', 'pre'
+        ]
+        allowed_attrs = {
+            'a': ['href', 'title', 'target'],
+            'img': ['src', 'alt', 'style', 'width', 'height', 'class'],
+            '*': ['style', 'class']
+        }
+
+        # 3. 세정 실행 (styles= 대신 css_sanitizer= 를 사용)
+        clean_content = bleach.clean(
+            content,
+            tags=allowed_tags,
+            attributes=allowed_attrs,
+            css_sanitizer=my_sanitizer
+        )
 
         # 1. 공지사항 고정 여부 확인 (관리자만 가능)
         is_pinned = 0
@@ -47,7 +78,7 @@ def board_write():
 
                 # 3. DB 저장 (is_pinned 컬럼 포함)
                 sql = "INSERT INTO boards (member_id, title, content, is_pinned) VALUES (%s, %s, %s, %s)"
-                cursor.execute(sql, (member_id, title, content, is_pinned))
+                cursor.execute(sql, (member_id, title, clean_content, is_pinned))
                 conn.commit()
 
             return redirect(url_for('board.board_list'))  # 저장 후 목록으로 이동
@@ -62,60 +93,70 @@ def board_write():
 # 게시물 목록
 @board_bp.route('/list', methods=['GET', 'POST'])
 def board_list():
+    # 1. 파라미터 수신
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = request.args.get('per_page', 10, type=int)
+    show_pinned = request.args.get('show_pinned', 'on')
+    search = request.args.get('search', '').strip()
+    search_type = request.args.get('search_type', 'title')
+    sort = request.args.get('sort', 'latest')
+
     offset = (page - 1) * per_page
 
-    # 1. 권한에 따른 WHERE 절 생성
-    # 관리자는 삭제된 글(active=0)도 보고, 유저는 정상 글(active=1)만 봄
-    if session.get('user_role') == 'admin':
-        where_clause = "WHERE 1=1"  # 모든 글 보기
-    else:
-        where_clause = "WHERE b.active = 1"  # 정상 글만 보기
+    # 2. WHERE 절 구성
+    where_clauses = ["b.active = 1"] if session.get('user_role') != 'admin' else ["1=1"]
+    if show_pinned != 'on':
+        where_clauses.append("b.is_pinned = 0")
 
-    # 2. 전체 개수 구하기 (권한 필터 적용)
-    count_sql = f"SELECT COUNT(*) as cnt FROM boards b {where_clause}"
-    count_res = fetch_query(count_sql, one=True)
+    query_args = []
+    if search:
+        if search_type == 'title':
+            where_clauses.append("b.title LIKE %s")
+            query_args.append(f"%{search}%")
+        elif search_type == 'content':
+            where_clauses.append("b.content LIKE %s")
+            query_args.append(f"%{search}%")
+        elif search_type == 'all':
+            where_clauses.append("(b.title LIKE %s OR b.content LIKE %s)")
+            query_args.extend([f"%{search}%", f"%{search}%"])
+
+    where_sentence = " WHERE " + " AND ".join(where_clauses)
+
+    # 3. 정렬 조건
+    if sort == 'popular':
+        order_sentence = "ORDER BY b.is_pinned DESC, like_count DESC, b.created_at DESC"
+    else:
+        order_sentence = "ORDER BY b.is_pinned DESC, b.created_at DESC"
+
+    # 4. 페이징 및 데이터 조회
+    count_sql = f"SELECT COUNT(*) as cnt FROM boards b {where_sentence}"
+    count_res = fetch_query(count_sql, tuple(query_args), True)
     total_count = count_res['cnt'] if count_res else 0
     total_pages = ceil(total_count / per_page)
 
-    # 3. 메인 쿼리 (좋아요, 싫어요, 댓글수 + [추가] 신고수)
     sql = f"""
-            SELECT 
-                b.*, 
-                m.name as writer_name,
-                (SELECT COUNT(*) FROM board_likes WHERE board_id = b.id) as like_count,
-                (SELECT COUNT(*) FROM board_dislikes WHERE board_id = b.id) as dislike_count,
-                (SELECT COUNT(*) FROM board_comments WHERE board_id = b.id) as comment_count,
-                (SELECT COUNT(*) FROM reports WHERE board_id = b.id) as report_count
-            FROM boards b
-            JOIN members m ON b.member_id = m.id
-            {where_clause}
-            ORDER BY b.is_pinned DESC, b.created_at DESC
-            LIMIT {per_page} OFFSET {offset}
-        """
-    rows = fetch_query(sql)
+        SELECT b.*, m.name as writer_name,
+               (SELECT COUNT(*) FROM board_likes WHERE board_id = b.id) as like_count,
+               (SELECT COUNT(*) FROM board_comments WHERE board_id = b.id) as comment_count
+        FROM boards b
+        JOIN members m ON b.member_id = m.id
+        {where_sentence}
+        {order_sentence}
+        LIMIT %s OFFSET %s
+    """
+    rows = fetch_query(sql, tuple(query_args + [per_page, offset]))
 
     boards = []
     for row in rows:
         board = Board.from_db(row)
         board.like_count = row['like_count']
-        board.dislike_count = row['dislike_count']
         board.comment_count = row['comment_count']
-        board.report_count = row['report_count']  # [추가] 신고 수 주입
         board.is_pinned = row.get('is_pinned', 0)
         boards.append(board)
 
-    pagination = {
-        'page': page,
-        'total_pages': total_pages,
-        'has_prev': page > 1,
-        'has_next': page < total_pages,
-        'prev_num': page - 1,
-        'next_num': page + 1
-    }
+    pagination = {'page': page, 'total_pages': total_pages, 'has_prev': page > 1, 'has_next': page < total_pages, 'prev_num': page - 1, 'next_num': page + 1}
 
-    return render_template('board/list.html', boards=boards, pagination=pagination)
+    return render_template('board/list.html', boards=boards, pagination=pagination, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned)
 
 # 게시물 상세보기
 @board_bp.route('/view/<int:board_id>')

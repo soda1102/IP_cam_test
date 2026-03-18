@@ -2,8 +2,9 @@
     --primary-teal: #20828A;
     --dark-charcoal: #212529;
     --light-teal: #fff;
-    --communa-primary: #20828A;
     --communa-hover: #186b72;
+    --underline : #fff5d7;
+    --highlight : #fd8a69
 }
 
 body {

@@ -7,11 +7,31 @@ from flask import (
 from src.common import (
     fetch_query, execute_query,
     log_system,
-    login_required
+    login_required, upload_file, Session
 )
+from src.domain import Board, Member
 
 mypage_bp = Blueprint('mypage', __name__)
 
+@mypage_bp.route('/')  # 또는 '/info' 등 원하는 경로
+def mypage_info():
+    # 1. 세션에서 로그인한 사용자의 PK(id)를 가져옴
+    user_pk = session.get('user_id')
+
+    if not user_pk:
+        return redirect(url_for('auth.login'))
+
+    # 2. DB에서 해당 사용자의 최신 정보 조회 (created_at 포함)
+    row = fetch_query("SELECT * FROM members WHERE id = %s", (user_pk,), one=True)
+
+    # 3. Member 객체로 변환 (가입일자가 포함된 버전)
+    user_obj = Member.from_db(row)
+
+    # 4. 템플릿 렌더링 (user 객체 하나만 넘겨도 객체 안에 가입일이 들어있음)
+    return render_template('mypage/info.html', user=user_obj)
+
+
+# 마이페이지
 @mypage_bp.route('/')
 @login_required
 def mypage():
@@ -31,11 +51,12 @@ def mypage():
     reported_count = count_data['reported_cnt'] if count_data else 0
 
     # 3. render_template 시 user 객체를 통째로 넘기면 user.profile_img를 HTML에서 쓸 수 있습니다.
-    return render_template('mypage/mypage.html',
+    return render_template('mypage/info.html',
                            user=user,
                            board_count=board_count,
                            reported_count=reported_count)
 
+# 회원 정보 수정
 @mypage_bp.route('/edit', methods=['GET', 'POST'])
 @login_required
 def member_edit():
@@ -68,3 +89,101 @@ def member_edit():
     except Exception as e:
         print(f"수정 에러: {e}")
         return "수정 중 오류 발생"
+
+# 프로필 사진
+@mypage_bp.route('/profile/upload', methods=['POST'])
+@login_required
+def profile_upload():
+
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    print('request.files :', request.files)
+
+    if 'profile_img' not in request.files:
+        return "<script>alert('파일이 없습니다.');history.back();</script>"
+
+    file = request.files['profile_img']
+    print('file :', file)
+
+    if file.filename == '':
+        return "<script>alert('선택된 파일이 없습니다.');history.back();</script>"
+
+    if file:
+
+        try:
+            file_url = upload_file(file, folder="profiles")
+
+            if file_url:
+
+                origin_name = file.filename
+                save_name = file_url
+                file_path = file_url
+                print('file_path :', file_path)
+                # [4] DB 업데이트
+                sql = "UPDATE members SET profile_img = %s WHERE id = %s"
+                execute_query(sql, (file_path, session['user_id']))
+
+                return "<script>alert('프로필 사진이 변경되었습니다.');location.href='/mypage';</script>"
+
+        except Exception as e:
+            # 어떤 에러인지 정확히 알기 위해 f-string 사용
+            return f"<script>alert('오류 발생: {str(e)}');history.back();</script>"
+
+    return "<script>alert('업로드 실패');history.back();</script>"
+
+# 작성한 게시물 조회
+@mypage_bp.route('/board/my')
+@login_required
+def my_board_list() :
+
+    if 'user_id' not in session :
+        return redirect(url_for('login'))
+
+    conn = Session.get_connection()
+
+    try :
+        with conn.cursor() as cursor :
+
+            # board_likes 테이블의 데이터를 참조하여 JOIN 쿼리 작성
+            # COUNT(bl.id)를 통해 게시물별 좋아요 개수를 가져옵니다.
+            sql = """
+                  SELECT 
+                      b.*, 
+                      m.name as writer_name,
+                      COUNT(bl.id) as like_count
+                  FROM boards b
+                  JOIN members m ON b.member_id = m.id
+                  LEFT JOIN board_likes bl ON b.id = bl.board_id
+                  WHERE b.member_id = %s
+                  GROUP BY b.id, m.name
+                  ORDER BY b.id DESC
+                  """
+            cursor.execute(sql, (session['user_id'],))
+            rows = cursor.fetchall()
+
+            boards = []
+
+            for row in rows :
+                board = Board.from_db(row)
+
+                # 1. 쿼리 결과에서 가져온 like_count를 객체에 주입 (UndefinedError 방지)
+                board.like_count = row.get('like_count', 0)
+
+                # 2. 아직 존재 여부가 불확실한 속성들은 기본값 0으로 설정
+                # (이렇게 하면 board_list.html에서 오류가 발생하지 않습니다)
+                if not hasattr(board, 'dislike_count') :
+                    board.dislike_count = 0
+
+                if not hasattr(board, 'comment_count') :
+                    board.comment_count = 0
+
+                boards.append(board)
+
+            # pagination=None을 넘겨주어 템플릿의 페이지네이션 에러를 방지합니다.
+            return render_template('board_list.html',
+                                   boards=boards,
+                                   list_title="내가 작성한 게시물",
+                                   pagination=None)
+
+    finally :
+        conn.close()
