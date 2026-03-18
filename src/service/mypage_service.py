@@ -9,11 +9,16 @@ from src.common import (
     log_system,
     login_required, upload_file, Session
 )
-from src.domain import Board, Member
+
+from src.common import fetch_query, execute_query, log_system, login_required
+# storage.py가 src 폴더 안에 있다면 아래와 같이 import
+from src.common.storage import upload_file
+from src.domain import Member
 
 mypage_bp = Blueprint('mypage', __name__)
 
-@mypage_bp.route('/')  # 또는 '/info' 등 원하는 경로
+@mypage_bp.route('/')
+@login_required
 def mypage_info():
     # 1. 세션에서 로그인한 사용자의 PK(id)를 가져옴
     user_pk = session.get('user_id')
@@ -30,9 +35,8 @@ def mypage_info():
     # 4. 템플릿 렌더링 (user 객체 하나만 넘겨도 객체 안에 가입일이 들어있음)
     return render_template('mypage/info.html', user=user_obj)
 
-
 # 마이페이지
-@mypage_bp.route('/')
+@mypage_bp.route('/main')
 @login_required
 def mypage():
     # 1. 유저 정보 가져오기 (이때 profile_img 컬럼 데이터가 포함되어야 합니다)
@@ -90,47 +94,6 @@ def member_edit():
         print(f"수정 에러: {e}")
         return "수정 중 오류 발생"
 
-# 프로필 사진
-@mypage_bp.route('/profile/upload', methods=['POST'])
-@login_required
-def profile_upload():
-
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    print('request.files :', request.files)
-
-    if 'profile_img' not in request.files:
-        return "<script>alert('파일이 없습니다.');history.back();</script>"
-
-    file = request.files['profile_img']
-    print('file :', file)
-
-    if file.filename == '':
-        return "<script>alert('선택된 파일이 없습니다.');history.back();</script>"
-
-    if file:
-
-        try:
-            file_url = upload_file(file, folder="profiles")
-
-            if file_url:
-
-                origin_name = file.filename
-                save_name = file_url
-                file_path = file_url
-                print('file_path :', file_path)
-                # [4] DB 업데이트
-                sql = "UPDATE members SET profile_img = %s WHERE id = %s"
-                execute_query(sql, (file_path, session['user_id']))
-
-                return "<script>alert('프로필 사진이 변경되었습니다.');location.href='/mypage';</script>"
-
-        except Exception as e:
-            # 어떤 에러인지 정확히 알기 위해 f-string 사용
-            return f"<script>alert('오류 발생: {str(e)}');history.back();</script>"
-
-    return "<script>alert('업로드 실패');history.back();</script>"
-
 # 작성한 게시물 조회
 @mypage_bp.route('/board/my')
 @login_required
@@ -187,3 +150,36 @@ def my_board_list() :
 
     finally :
         conn.close()
+
+# 프로필
+@mypage_bp.route('/profile/upload', methods=['POST'])
+@login_required
+def profile_upload():
+    user_id = session.get('user_id')
+
+    # HTML의 <input name="profile_img">와 일치해야 함
+    if 'profile_img' not in request.files:
+        return "<script>alert('파일이 전송되지 않았습니다.');history.back();</script>"
+
+    file = request.files['profile_img']
+    if file.filename == '':
+        return "<script>alert('선택된 사진이 없습니다.');history.back();</script>"
+
+    try:
+        # storage.py의 함수를 이용해 Cloudinary 업로드
+        file_url = upload_file(file, folder=f"user_profiles/{user_id}")
+
+        if file_url:
+            # 1. DB 업데이트
+            sql = "UPDATE members SET profile_img = %s WHERE id = %s"
+            execute_query(sql, (file_url, user_id))
+
+            # 2. [핵심] 세션 정보 즉시 갱신
+            # 템플릿이나 헤더에서 session['user_profile'] 등을 사용한다면 여기서 바꿔줘야 합니다.
+            session['user_profile'] = file_url
+
+            # 3. [핵심] 알림 후 마이페이지로 이동 (경로 끝에 / 확인)
+            return "<script>alert('프로필 사진이 변경되었습니다.'); location.href='/mypage/';</script>"
+
+    except Exception as e:
+        return f"<script>alert('오류 발생: {str(e)}');history.back();</script>"

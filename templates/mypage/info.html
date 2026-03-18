@@ -185,12 +185,18 @@
                 <div class="profile-wrap">
                     <div class="profile-image-container">
                         <div class="profile-circle">
-                            <img src="{{ url_for('static', filename='logo/the_road_library_logo.png') }}" alt="프로필">
+                            <img src="{{ user.profile_img if user.profile_img else url_for('static', filename='logo/the_road_library_logo.png') }}"
+                                 id="profileDisplay"
+                                 alt="프로필">
+                        </div>
+                        <div class="profile-edit-btn" onclick="clickInput()" style="cursor:pointer;" title="프로필 사진 수정">
+                            <i class="bi bi-pencil-fill"></i>
                         </div>
 
-                        <a href="/mypage/profile/photo" class="profile-edit-btn" title="프로필 사진 수정">
-                            <i class="bi bi-pencil-fill"></i>
-                        </a>
+                        <form id="profileForm" action="/mypage/profile/upload" method="POST" enctype="multipart/form-data">
+                            <input type="file" id="hiddenInput" name="profile_img" accept="image/*"
+                                   style="display:none;" onchange="submitProfile()">
+                        </form>
                     </div>
                     <div class="user-name">{{ user.name }}</div>
                     <div class="role-label">{{ user.role.upper() }} 계정</div>
@@ -237,4 +243,17 @@
         </div>
     </div>
 </div>
+<script>
+function clickInput() {
+    // 연필 아이콘 클릭 시 숨겨진 input 태그를 클릭함
+    document.getElementById('hiddenInput').click();
+}
+function submitProfile() {
+    const fileInput = document.getElementById('hiddenInput');
+    if (fileInput.files && fileInput.files[0]) {
+        // 파일을 선택하는 순간 바로 form을 서버로 전송
+        document.getElementById('profileForm').submit();
+    }
+}
+</script>
 {% endblock %}
