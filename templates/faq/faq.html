@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}도움말 - {% endblock %}
+
+{% block style %}
+<style>
+    .bg-section { padding: 80px 0; }
+    
+    /* 상단 헤더 섹션 */
+    .help-hero {
+        background: linear-gradient(135deg, #20828A 0%, #165e63 100%);
+        padding: 60px 0;
+        border-radius: 20px;
+        color: white;
+        margin-bottom: 50px;
+    }
+
+    /* 구글 스타일 아코디언 커스텀 */
+    .accordion-item {
+        border: none;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 10px;
+    }
+    
+    .accordion-button {
+        font-weight: 600;
+        color: #333;
+        padding: 20px;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .accordion-button:not(.collapsed) {
+        color: #20828A; /* 펼쳐졌을 때 텍스트 색상 */
+    }
+
+    /* 토글 아이콘 색상 변경 */
+    .accordion-button::after {
+        background-size: 1rem;
+    }
+
+    .accordion-body {
+        padding: 0 20px 30px 20px;
+        color: #666;
+        line-height: 1.8;
+    }
+
+    .point-tech {
+        color: #20828A;
+        font-weight: 700;
+        background: #f0f8f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    /* 검색창 스타일 */
+    .search-box {
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+    }
+    .search-box input {
+        border-radius: 30px;
+        padding: 15px 25px;
+        border: none;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container bg-section">
+    <div class="help-hero text-center shadow-sm">
+        <h1 class="display-5 fw-bold mb-3">어떻게 도와드릴까요?</h1>
+        <p class="lead mb-4" style="opacity: 0.9;">도로 위의 숨은 위험, 도(道)서관이 먼저 읽습니다.</p>
+
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <h2 class="h4 fw-bold mb-4 px-2">자주 사용되는 도움말</h2>
+            
+            <div class="accordion accordion-flush" id="faqAccordion">
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            Q. 도(道)서관은 어떤 서비스인가요?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            AI 기술을 활용해 도로 위 위험 요소를 실시간으로 분석하고, 
+                            운전자들이 서로의 경험과 지식을 공유하는 안전 주행 통합 플랫폼입니다.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            Q. 도(道)와주세요가 뭔가요?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <span class="point-tech">YOLOv11</span> 딥러닝 모델을 기반으로 도로 위의 분석된 데이터로 당신의 주행을 더 안전하게 가이드합니다.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            Q. 도(道)란도란이 뭔가요?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <strong>'도란도란'</strong>은 길(道) 위에서 일어나는 소소한 이야기부터 실시간 교통 상황까지, 운전자들이 자유롭게 소통하는 커뮤니티 공간입니다.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                            Q. 포스터를 다운로드할 수 있나요?
+                        </button>
+                    </h2>
+                    <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            네, 개별 포스터 이미지 파일(PNG/JPG) 다운로드 기능을 제공합니다. 다운로드 시 <strong>저작권 표기가 자동으로 삽입</strong>되어 안전한 공유가 가능합니다.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

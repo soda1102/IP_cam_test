@@ -20,6 +20,8 @@ from src.service import (
     introduce_bp,
     board_bp,
     admin_bp,
+    faq_bp,
+    tip_bp
     # 여기 아래에 계속 추가하기
 )
 # FIXME end
@@ -52,6 +54,8 @@ app.register_blueprint(mypage_bp, url_prefix='/mypage')
 app.register_blueprint(introduce_bp, url_prefix='/introduce')
 app.register_blueprint(board_bp, url_prefix='/board')
 app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(faq_bp, url_prefix='/faq')
+app.register_blueprint(tip_bp, url_prefix='/tip')
 # FIXME end
 
 if __name__ == '__main__':

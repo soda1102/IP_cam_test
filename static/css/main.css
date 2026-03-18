@@ -197,11 +197,40 @@ main {
     margin-top: auto; /* 내용이 적어도 항상 바닥에 위치 */
 }
 .footer-logo { font-weight: 800; font-size: 1.8rem; color: var(--primary-teal); margin-bottom: 5px !important; }
-.footer-text { opacity: 0.6; font-size: 0.8rem; line-height: 1.4; }
+.footer-text { opacity: 1.0; font-size: 0.8rem; line-height: 1.4; }
 .footer-text p { margin-bottom: 2px; }
 
 /* 드롭다운 자동 호버 설정 */
 .nav-item.dropdown:hover .dropdown-menu {
     display: block;
     margin-top: 0;
+}
+
+/* FAQ 링크 강조 스타일 */
+.footer-faq-link {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 8px 24px;
+    background-color: #ffffff;
+    color: #20828A;
+    border: 1.5px solid #20828A;
+    border-radius: 20px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+}
+
+/* 마우스 올렸을 때 효과 */
+.footer-faq-link:hover {
+    background-color: #20828A;
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(32, 130, 138, 0.2);
+    transform: translateY(-2px);
+}
+
+.footer-text p {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 0.3rem;
 }

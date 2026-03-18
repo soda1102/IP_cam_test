@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}프로젝트 배경 - 도(道)서관{% endblock %}
+{% block title %}프로젝트 배경 - {% endblock %}
 
 {% block style %}
 <style> /* <--- 여기서 < 가 빠져있었습니다! */
@@ -15,14 +15,24 @@
         border-radius: 0 15px 15px 0;
     }
 
-    .img-placeholder {
-        background-color: #e9ecef;
+    /* 이미지와 placeholder의 크기를 동일하게 고정 */
+    .img-box-fixed {
+        width: 100%;
+        height: 350px; /* 두 번째 박스 규격에 맞춘 고정 높이 */
+        overflow: hidden;
         border-radius: 15px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 300px;
-        color: #adb5bd;
+        background-color: #e9ecef;
+    }
+
+    /* 박스 안의 이미지가 비율을 유지하며 꽉 차게 설정 */
+    .img-box-fixed img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* 이미지가 잘리더라도 박스를 가득 채움 */
+        object-position: center;
     }
 
     /* 폰트가 깨져 보인다면 강제로 다시 지정 */
@@ -51,8 +61,8 @@
             </p>
         </div>
         <div class="col-lg-6">
-            <div class="img-placeholder shadow-sm">
-                <span>[산간 도로 및 서식지 분절 관련 이미지]</span>
+            <div class="img-box-fixed shadow-sm">
+                <img src="/static/img/mountain_range.png" alt="산간 도로 이미지">
             </div>
         </div>
     </div>
@@ -61,15 +71,15 @@
         <div class="col-lg-6 mb-4 mb-lg-0">
             <h2 class="h3 mb-4 fw-bold">운전자의 시야 제한과 사고 위험</h2>
             <p class="lh-lg">
-                산간 도로의 특성상 급커브와 터널이 많아 운전자의 시야 확보가 제한적인 상황에서, <span class="text-danger fw-bold">갑작스러운 야생 동물의 출현은 대형 사고의 직접적인 원인</span>이 됩니다.
+                산간 도로의 특성상 급커브와 터널이 많아 운전자의 시야 확보가 제한적인 상황에서,<br> <span class="text-danger fw-bold">갑작스러운 야생 동물의 출현은 대형 사고의 직접적인 원인</span>이 됩니다.
             </p>
             <p class="lh-lg">
-                특히 야간이나 악천후 시에는 육안 식별이 더욱 어려워져, 동물의 생명뿐만 아니라 운전자의 급제동 및 차선 이탈로 인한 연쇄 추돌 사고 등 치명적인 인명 피해로 이어지는 경우가 빈번합니다.
+                특히 야간이나 악천후 시에는 육안 식별이 더욱 어려워져, 동물의 생명뿐만 아니라 운전자의 급제동 및 <br>차선 이탈로 인한 연쇄 추돌 사고 등 치명적인 인명 피해로 이어지는 경우가 빈번합니다.
             </p>
         </div>
         <div class="col-lg-6">
-            <div class="img-placeholder shadow-sm">
-                <span>[야간/악천후 시야 사각지대 이미지]</span>
+            <div class="img-box-fixed shadow-sm">
+                <img src="/static/img/animal_on_road.png" alt="도로 위 동물 이미지">
             </div>
         </div>
     </div>

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}홈페이지 소개 - {% endblock %}
+
+{% block style %}
+<style>
+    /* 소개 페이지 전용 스타일 */
+    .bg-section { padding: 80px 0; }
+    .point-text { color: var(--primary-teal); font-weight: 700; }
+
+    /* --- [수정] 강조 카드: 배경색을 녹색(#20828A)으로, 글자를 하얀색으로 --- */
+    .accent-card {
+        border-left: 5px solid #165e63;
+        background-color: #20828A;      /* 요청하신 녹색 계열 */
+        padding: 40px;
+        border-radius: 0 15px 15px 0;
+        margin-bottom: 80px;
+        color: #ffffff;                 /* 글자색 하얀색 */
+    }
+
+    /* --- [추가] 도(道)서관 강조 박스: 배경 노란색(#fff5d7) --- */
+    .highlight-box {
+        background-color: #fff5d7;      /* 요청하신 강조 색상 */
+        color: #212529;                 /* 박스 안 글자색은 어둡게 */
+        padding: 2px 10px;
+        border-radius: 4px;
+        margin: 0 4px;
+        display: inline-block;
+    }
+
+    /* 카드 내 일반 텍스트 투명도 조절로 세련미 추가 */
+    .accent-card p {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    /* 이미지 홀더 스타일 */
+    .img-placeholder {
+        background-color: #e9ecef;
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 350px;
+        color: #adb5bd;
+        text-align: center;
+        padding: 20px;
+    }
+
+    /* 기능 소개 아이콘 박스 */
+    .feature-icon-circle {
+        width: 80px;
+        height: 80px;
+        background-color: #e6f2f3; /* 연한 틸 배경 */
+        color: var(--primary-teal);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }
+
+    .lh-lg { line-height: 1.8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container bg-section">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold mb-3">홈페이지 소개</h1>
+        <p class="lead text-muted">도로 위의 지혜를 읽는 가장 스마트한 방법</p>
+        <hr class="mx-auto" style="width: 60px; height: 4px; background-color: var(--primary-teal); opacity: 1;">
+    </div>
+
+    <div class="accent-card shadow-sm">
+        <h2 class="h3 fw-bold mb-4">
+            "도로 위의 숨은 위험, <span class="highlight-box">도(道)서관</span>이 먼저 읽습니다."
+        </h2>
+        <p class="fs-5 lh-lg mb-0">
+            도(道)서관은 AI 기술을 활용해 도로 위 숨겨진 위험 요소를 실시간으로 분석하고, 운전자들이 서로의 경험과 지식을 공유하는 <strong>안전 주행 통합 플랫폼</strong>입니다. <br>
+            우리는 단순히 길을 안내하는 것을 넘어, 당신의 모든 여정이 기록되고 보호받는 '도로 위의 도서관'이 되고자 합니다.
+        </p>
+    </div>
+
+    <div class="text-center mb-5 pt-5">
+        <h2 class="display-6 fw-bold">핵심 기능 안내</h2>
+        <p class="text-muted">도(道)서관이 제공하는 세심한 안전 솔루션</p>
+    </div>
+
+    <div class="row align-items-center mb-5 pb-5">
+        <div class="col-lg-6">
+            <div class="feature-icon-circle">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 11.5a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5v7zm-2-5.5a.5.5 0 0 0-.5-.5H6a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V6z"/></svg>
+            </div>
+            <h3 class="fw-bold mb-3">도(道)와주세요 <span class="text-muted fs-5">(Solution Archive)</span></h3>
+            <p class="lh-lg">
+                <span class="point-text">YOLOv11 딥러닝 모델</span>을 기반으로 도로 위의 <br> 야생동물(고라니, 멧돼지 등)과 낙하물을 실시간으로 감지합니다.
+            </p>
+            <p class="lh-lg">
+                분석된 데이터는 단순한 경고를 넘어 <span class="point-text">사고 다발 구역 예보 시스템</span>으로 시각화되어, <br> 당신의 주행을 더 안전하게 가이드합니다.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="img-placeholder shadow-sm">
+                <p class="fw-bold mb-1">[AI 위험 감지 및 시각화 화면]</p>
+                <small>YOLOv11 기반 실시간 객체 인식 데모 이미지</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row align-items-center flex-lg-row-reverse mb-5">
+        <div class="col-lg-6">
+            <div class="feature-icon-circle">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1-.5.5h-2v2a.5.5 0 0 1-1 0v-2h-2a.5.5 0 0 1 0-1h2v-2a.5.5 0 0 1 1 0v2h2a.5.5 0 0 1 .5.5z"/></svg>
+            </div>
+            <h3 class="fw-bold mb-3">도(道)란도란 <span class="text-muted fs-5">(Communication Hub)</span></h3>
+            <p class="lh-lg text-primary fw-bold">"운전자의 생생한 목소리가 모이는 곳"</p>
+            <p class="lh-lg">
+                '도란도란'은 길(道) 위에서 일어나는 소소한 이야기부터 실시간 교통 상황까지, <br>운전자들이 자유롭게 소통하는 커뮤니티 공간입니다.
+            </p>
+            <p class="lh-lg">
+                <span class="point-text">베테랑 운전자들의 노하우</span>를 배우고, 오늘 내가 겪은 도로 위의 상황을 이웃 운전자들과 나누어 보세요.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="img-placeholder shadow-sm">
+                <p class="fw-bold mb-1">[실시간 커뮤니티 활성화 이미지]</p>
+                <small>사용자 간 소통 및 노하우 공유 UI 예시</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
