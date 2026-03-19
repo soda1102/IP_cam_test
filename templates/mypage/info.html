@@ -7,7 +7,7 @@
 <style>
     .info-body {
         background-color: #F8F9FA;
-        padding: 50px 0;
+        padding: 50px 0 0 0;
         min-height: 80vh;
     }
 
@@ -165,41 +165,15 @@
     }
 
     /* 5. 하단 홈 링크 */
-    .home-back { text-align: center; margin-top: 25px; }
+    .home-back { text-align: center; margin-top: auto; margin-bottom: auto; padding: 30px 0; }
     .home-back a { color: #888; text-decoration: none; font-size: 14px; }
     .home-back a:hover { color: #008080; }
-
-    /* 메뉴바 스타일 */
-    .edit-menu-layer {
-        position: absolute;
-        top: 45px;
-        right: 0;
-        width: 140px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        z-index: 100;
-        overflow: hidden;
-        border: 1px solid #eee;
-    }
-
-    .edit-menu-layer div {
-        padding: 10px;
-        font-size: 13px;
-        color: #333;
-        text-align: center;
-        transition: background 0.2s;
-    }
-
-    .edit-menu-layer div:hover {
-        background-color: #f8f9fa;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="info-body">
-    <div class="container">
+    <div class="container-fluid">
 
         <div class="info-header-box">
             <h2>도(道)서관 회원 정보</h2>
