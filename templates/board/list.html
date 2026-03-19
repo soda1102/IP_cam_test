@@ -156,6 +156,12 @@
                                 {% endif %}
 
                                 <span class="title-link">{{ board.title }}</span>
+
+                                {% if board.file_count > 0 %}
+                                    <span class="ms-1 text-muted" title="첨부파일 있음">
+                                        <i class="bi bi-paperclip" style="transform: rotate(45deg); display: inline-block;"></i>
+                                    </span>
+                                {% endif %}
                             </div>
                         </td>
                         <td class="small">{{ board.writer_name }}</td>

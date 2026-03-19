@@ -1,5 +1,9 @@
-from math import ceil
+import os
 import bleach
+import cloudinary
+import cloudinary.uploader
+
+from math import ceil
 from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify
 from src.common import Session, login_required
 from src.common.db import fetch_query, execute_query
@@ -7,157 +11,223 @@ from src.domain import Board
 from src.common.storage import upload_file
 from bleach.css_sanitizer import CSSSanitizer
 
+
 board_bp = Blueprint('board', __name__)
+
+# 1. Cloudinary 연결 설정 (이미 load_dotenv()가 실행된 상태라면 아래처럼만 적으세요)
+cloudinary.config(
+    cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key = os.getenv('CLOUDINARY_API_KEY'),
+    api_secret = os.getenv('CLOUDINARY_API_SECRET'),
+    secure = True
+)
 
 # 게시물 작성
 @board_bp.route('/write', methods=['GET', 'POST'])
 @login_required
 def board_write():
-    # 1. 사용자가 '글쓰기' 버튼을 눌러서 들어왔을 때 (화면 보여주기)
     if request.method == 'GET':
-        # 관리자 여부를 템플릿에 전달
         is_admin = (session.get('user_role') == "admin")
         return render_template('board/write.html', is_admin=is_admin)
 
-    # 2. 사용자가 '등록하기' 버튼을 눌러서 데이터를 보냈을 때(DB 저장)
     elif request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
         member_id = session.get('user_id')
 
+        # 1. Cloudinary 파일 업로드 로직
+        file = request.files.get('file')
+        file_info = None
 
-        # 1. CSS 세정 객체 생성 (경고 해결의 핵심)
-        # 만약 여기서 에러가 나면 코드 맨 위에 임포트가 잘 되었는지 확인하세요!
-        allowed_styles = ['color', 'background-color', 'font-size', 'text-align', 'float', 'margin', 'padding']
+        if file and file.filename != '':
+            try:
+                # 파일 사이즈 추출
+                file.seek(0, os.SEEK_END)
+                f_size = file.tell()
+                file.seek(0)
 
+                upload_result = cloudinary.uploader.upload(file, resource_type="auto")
+                file_info = {
+                    'origin_name': file.filename,
+                    'save_name': upload_result.get('secure_url'),
+                    'file_path': upload_result.get('secure_url'),
+                    'file_size': f_size
+                }
+            except Exception as e:
+                print(f"Cloudinary Error: {e}")
+                return "<script>alert('파일 업로드 중 오류가 발생했습니다.');history.back();</script>"
+
+        # 2. 보안 세정 (Bleach)
+        allowed_tags = ['p', 'br', 'b', 'i', 'u', 'em', 'strong', 'span', 'img', 'a', 'ul', 'ol', 'li', 'h1', 'h2',
+                        'h3', 'table', 'thead', 'tbody', 'tr', 'th', 'td']
+        allowed_attrs = {'a': ['href', 'title', 'target'], 'img': ['src', 'alt', 'style'], '*': ['style', 'class']}
         try:
-            # 최신 방식
-            my_sanitizer = CSSSanitizer(allowed_css_properties = allowed_styles)
-        except NameError:
-            # 임포트 실패 시 안전을 위해 스타일 비허용 혹은 기본값 처리
+            my_sanitizer = CSSSanitizer(allowed_css_properties=['color', 'background-color', 'font-size', 'text-align'])
+        except:
             my_sanitizer = None
+        clean_content = bleach.clean(content, tags=allowed_tags, attributes=allowed_attrs, css_sanitizer=my_sanitizer)
 
-        # 2. 허용 태그 및 속성 설정
-        allowed_tags = [
-            'p', 'br', 'b', 'i', 'u', 'em', 'strong', 'span', 'img', 'a',
-            'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote', 'code', 'pre'
-        ]
-        allowed_attrs = {
-            'a': ['href', 'title', 'target'],
-            'img': ['src', 'alt', 'style', 'width', 'height', 'class'],
-            '*': ['style', 'class']
-        }
-
-        # 3. 세정 실행 (styles= 대신 css_sanitizer= 를 사용)
-        clean_content = bleach.clean(
-            content,
-            tags=allowed_tags,
-            attributes=allowed_attrs,
-            css_sanitizer=my_sanitizer
-        )
-
-        # 1. 공지사항 고정 여부 확인 (관리자만 가능)
-        is_pinned = 0
-        if session.get('user_role') == "admin":
-            if request.form.get('is_pinned') == 'on':
-                is_pinned = 1
-
+        # 3. DB 저장 (ERD 구조 준수)
         conn = Session.get_connection()
-
         try:
             with conn.cursor() as cursor:
-                # 2. 공지사항(is_pinned=1)인 경우에만 개수 체크
-                if is_pinned == 1:
-                    count_sql = "SELECT COUNT(*) AS c FROM boards WHERE is_pinned = 1"
-                    cursor.execute(count_sql)
-                    pinned_count = cursor.fetchone()['c']  # 튜플이나 딕셔너리 형태에 따라 적절히 추출
-                    print(pinned_count)
+                # [A] posts 테이블에 저장 (attachments가 posts를 참조하므로)
+                # ERD 기준 컬럼명: member_id, title, content
+                sql_post = "INSERT INTO posts (member_id, title, content) VALUES (%s, %s, %s)"
+                cursor.execute(sql_post, (member_id, title, clean_content))
 
-                    if pinned_count >= 10:
-                        return "<script>alert('공지사항은 최대 10개까지만 등록 가능합니다.');history.back();</script>"
+                # 방금 생성된 posts 테이블의 id 가져오기
+                new_post_id = cursor.lastrowid
 
-                # 3. DB 저장 (is_pinned 컬럼 포함)
-                sql = "INSERT INTO boards (member_id, title, content, is_pinned) VALUES (%s, %s, %s, %s)"
-                cursor.execute(sql, (member_id, title, clean_content, is_pinned))
+                # [B] attachments 테이블에 저장
+                if file_info:
+                    # ERD 컬럼명: post_id, origin_name, save_name, file_path, file_size
+                    sql_file = """
+                        INSERT INTO attachments (post_id, origin_name, save_name, file_path, file_size) 
+                        VALUES (%s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(sql_file, (
+                        new_post_id,
+                        file_info['origin_name'],
+                        file_info['save_name'],
+                        file_info['file_path'],
+                        file_info['file_size']
+                    ))
+
                 conn.commit()
-
-            return redirect(url_for('board.board_list'))  # 저장 후 목록으로 이동
+            return redirect(url_for('board.board_list'))
 
         except Exception as e:
-            print(f"글쓰기 에러: {e}")
-            return "저장 중 에러가 발생했습니다."
-
+            conn.rollback()
+            print(f"DB 저장 에러: {e}")
+            return f"저장 중 에러가 발생했습니다: {e}"
         finally:
             conn.close()
 
 # 게시물 목록
 @board_bp.route('/list', methods=['GET', 'POST'])
 def board_list():
-    # 1. 파라미터 수신
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    show_pinned = request.args.get('show_pinned', 'on')
     search = request.args.get('search', '').strip()
     search_type = request.args.get('search_type', 'title')
     sort = request.args.get('sort', 'latest')
-
     offset = (page - 1) * per_page
 
-    # 2. WHERE 절 구성
-    where_clauses = ["b.active = 1"] if session.get('user_role') != 'admin' else ["1=1"]
-    if show_pinned != 'on':
-        where_clauses.append("b.is_pinned = 0")
-
+    # ── 검색 조건 ──
+    search_query = ""
     query_args = []
     if search:
         if search_type == 'title':
-            where_clauses.append("b.title LIKE %s")
-            query_args.append(f"%{search}%")
+            search_query = "AND title LIKE %s"
+            query_args = [f"%{search}%"]
         elif search_type == 'content':
-            where_clauses.append("b.content LIKE %s")
-            query_args.append(f"%{search}%")
+            search_query = "AND content LIKE %s"
+            query_args = [f"%{search}%"]
         elif search_type == 'all':
-            where_clauses.append("(b.title LIKE %s OR b.content LIKE %s)")
-            query_args.extend([f"%{search}%", f"%{search}%"])
+            search_query = "AND (title LIKE %s OR content LIKE %s)"
+            query_args = [f"%{search}%", f"%{search}%"]
 
-    where_sentence = " WHERE " + " AND ".join(where_clauses)
+    # ── 1. 전체 개수 (공지 포함, 페이지네이션용) ──
+    count_sql = f"""
+        SELECT SUM(cnt) as total FROM (
+            SELECT COUNT(*) as cnt FROM boards WHERE 1=1 {search_query}
+            UNION ALL
+            SELECT COUNT(*) as cnt FROM posts  WHERE 1=1 {search_query}
+        ) as combined_count
+    """
+    count_res = fetch_query(count_sql, tuple(query_args * 2), one=True)
+    total_count = int(count_res['total']) if count_res and count_res['total'] else 0
+    total_pages = ceil(total_count / per_page) if total_count else 1
 
-    # 3. 정렬 조건
-    if sort == 'popular':
-        order_sentence = "ORDER BY b.is_pinned DESC, like_count DESC, b.created_at DESC"
-    else:
-        order_sentence = "ORDER BY b.is_pinned DESC, b.created_at DESC"
+    # ── 정렬 기준 ──
+    order_map = {
+        'latest':  'combined.created_at DESC',
+        'oldest':  'combined.created_at ASC',
+        'views':   'combined.visits DESC',
+    }
+    order_clause = order_map.get(sort, 'combined.created_at DESC')
 
-    # 4. 페이징 및 데이터 조회
-    count_sql = f"SELECT COUNT(*) as cnt FROM boards b {where_sentence}"
-    count_res = fetch_query(count_sql, tuple(query_args), True)
-    total_count = count_res['cnt'] if count_res else 0
-    total_pages = ceil(total_count / per_page)
-
+    # ── 2. 목록 조회 ──
+    # boards: likes(board_likes), comments(board_comments), attachments 없음
+    # posts : likes 없음, attachments(attachments 테이블), comments 없음(posts 전용 댓글 없으므로 0)
+    # 공지(is_pinned=1)는 sort 무관하게 항상 상단 고정
     sql = f"""
-        SELECT b.*, m.name as writer_name,
-               (SELECT COUNT(*) FROM board_likes WHERE board_id = b.id) as like_count,
-               (SELECT COUNT(*) FROM board_comments WHERE board_id = b.id) as comment_count
-        FROM boards b
-        JOIN members m ON b.member_id = m.id
-        {where_sentence}
-        {order_sentence}
+        SELECT * FROM (
+            SELECT
+                b.id,
+                b.member_id,
+                b.title,
+                b.content,
+                b.created_at,
+                b.visits,
+                b.is_pinned,
+                'board' AS origin_table,
+                m.name  AS writer_name,
+                m.profile_img AS writer_profile,
+                (SELECT COUNT(*) FROM board_likes    WHERE board_id = b.id) AS like_count,
+                (SELECT COUNT(*) FROM board_comments WHERE board_id = b.id) AS comment_count,
+                0 AS file_count
+            FROM boards b
+            JOIN members m ON b.member_id = m.id
+            WHERE 1=1 {search_query}
+
+            UNION ALL
+
+            SELECT
+                p.id,
+                p.member_id,
+                p.title,
+                p.content,
+                p.created_at,
+                p.view_count AS visits,
+                0            AS is_pinned,
+                'post'       AS origin_table,
+                m.name       AS writer_name,
+                m.profile_img AS writer_profile,
+                0 AS like_count,
+                0 AS comment_count,
+                (SELECT COUNT(*) FROM attachments WHERE post_id = p.id) AS file_count
+            FROM posts p
+            JOIN members m ON p.member_id = m.id
+            WHERE 1=1 {search_query}
+        ) AS combined
+        ORDER BY combined.is_pinned DESC, {order_clause}
         LIMIT %s OFFSET %s
     """
-    rows = fetch_query(sql, tuple(query_args + [per_page, offset]))
+    final_args = tuple(query_args * 2 + [per_page, offset])
+    rows = fetch_query(sql, final_args)
 
+    # ── 3. 객체 변환 ──
     boards = []
     for row in rows:
         board = Board.from_db(row)
-        board.like_count = row['like_count']
-        board.comment_count = row['comment_count']
-        board.is_pinned = row.get('is_pinned', 0)
+        board.like_count    = row.get('like_count', 0)
+        board.comment_count = row.get('comment_count', 0)
+        board.file_count    = row.get('file_count', 0)
+        board.writer_name   = row.get('writer_name', '')
+        board.writer_profile = row.get('writer_profile')
+        board.origin_table  = row.get('origin_table')
+        board.visits        = row.get('visits', 0)
         boards.append(board)
 
-    pagination = {'page': page, 'total_pages': total_pages, 'has_prev': page > 1, 'has_next': page < total_pages, 'prev_num': page - 1, 'next_num': page + 1}
+    pagination = {
+        'page':        page,
+        'total_pages': total_pages,
+        'has_prev':    page > 1,
+        'has_next':    page < total_pages,
+    }
 
-    return render_template('board/list.html', boards=boards, pagination=pagination, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned)
+    return render_template(
+        'board/list.html',
+        boards=boards,
+        pagination=pagination,
+        search=search,
+        search_type=search_type,
+        sort=sort,
+        per_page=per_page,
+        total_count=total_count,
+    )
 
 # 게시물 상세보기
 @board_bp.route('/view/<int:board_id>')
@@ -300,50 +370,44 @@ def board_delete(board_id):
         return "<script>alert('처리 중 오류가 발생했습니다.'); history.back();</script>"
 
 # 좋아요 기능
-@board_bp.route('/view/like/<int:board_id>', methods = ['POST'])
+@board_bp.route('/like/<int:board_id>', methods = ['POST'])
 def board_like_toggle(board_id):
     # 1. 로그인 체크
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': '로그인이 필요합니다.'}), 401
 
+    user_id = session['user_id']
     try:
-        print('board_id :', board_id)
-        # 2. 게시글 존재 확인
+        # 게시글 존재 확인
         board = fetch_query("SELECT id FROM boards WHERE id = %s", (board_id,), one=True)
         if not board:
             return jsonify({'success': False, 'message': '존재하지 않는 게시글입니다.'}), 404
 
-        # 3. 좋아요 상태 확인
-        check_sql = "SELECT id FROM board_likes WHERE board_id = %s AND member_id = %s"
-        # session['user_id']가 DB의 members.id(PK, 숫자)와 일치하는지 꼭 확인하세요!
-        already_liked = fetch_query(check_sql, (board_id, session['user_id']), one=True)
+        # 좋아요 상태 확인
+        already_liked = fetch_query("SELECT id FROM board_likes WHERE board_id = %s AND member_id = %s",
+                                    (board_id, user_id), one=True)
 
         if already_liked:
-            execute_query("DELETE FROM board_likes WHERE board_id = %s AND member_id = %s",
-                          (board_id, session['user_id']))
+            execute_query("DELETE FROM board_likes WHERE board_id = %s AND member_id = %s", (board_id, user_id))
             is_liked = False
         else:
-            execute_query("INSERT INTO board_likes (board_id, member_id) VALUES (%s, %s)",
-                          (board_id, session['user_id']))
+            # 🔥 [핵심] 좋아요를 추가하기 전에, 싫어요가 되어 있다면 삭제
+            execute_query("DELETE FROM board_dislikes WHERE board_id = %s AND member_id = %s", (board_id, user_id))
+            execute_query("INSERT INTO board_likes (board_id, member_id) VALUES (%s, %s)", (board_id, user_id))
             is_liked = True
 
-        # 4. 개수 집계
-        count_res = fetch_query("SELECT COUNT(*) as cnt FROM board_likes WHERE board_id = %s", (board_id,), one=True)
-        like_count = count_res['cnt'] if count_res else 0
+        # 양쪽 개수 모두 집계 (JS에서 둘 다 업데이트하기 위함)
+        l_res = fetch_query("SELECT COUNT(*) as cnt FROM board_likes WHERE board_id = %s", (board_id,), one=True)
+        d_res = fetch_query("SELECT COUNT(*) as cnt FROM board_dislikes WHERE board_id = %s", (board_id,), one=True)
 
         return jsonify({
             'success': True,
             'is_liked': is_liked,
-            'like_count': like_count
+            'like_count': l_res['cnt'] if l_res else 0,
+            'dislike_count': d_res['cnt'] if d_res else 0  # 싫어요 개수도 함께 전달
         })
-
     except Exception as e:
-        # 이 부분이 중요합니다! 에러가 나더라도 클라이언트에게 JSON을 돌려줘야 합니다.
-        print(f"Database Error: {e}")
-        return jsonify({
-            'success': False,
-            'message': f"데이터베이스 오류가 발생했습니다: {str(e)}"
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # 싫어요 기능
 @board_bp.route('/dislike/<int:board_id>', methods = ['POST'])
@@ -352,47 +416,37 @@ def board_dislike_toggle(board_id):
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': '로그인이 필요합니다.'}), 401
 
+    user_id = session['user_id']
     try:
-        # 2. 게시글 존재 확인
         board = fetch_query("SELECT id FROM boards WHERE id = %s", (board_id,), one=True)
         if not board:
             return jsonify({'success': False, 'message': '존재하지 않는 게시글입니다.'}), 404
 
-        # 3. 싫어요 상태 확인
-        check_sql = "SELECT id FROM board_dislikes WHERE board_id = %s AND member_id = %s"
-
-        # session['user_id']가 DB의 members.id(PK)와 일치한다고 가정합니다.
-        # (만약 session에 문자열 ID가 들어있다면, 여기서 member_id를 조회하는 로직이 추가로 필요할 수 있습니다)
-        already_disliked = fetch_query(check_sql, (board_id, session['user_id']), one=True)
+        # 싫어요 상태 확인
+        already_disliked = fetch_query("SELECT id FROM board_dislikes WHERE board_id = %s AND member_id = %s",
+                                       (board_id, user_id), one=True)
 
         if already_disliked:
-            # 이미 싫어요를 눌렀다면 -> 삭제 (취소)
-            execute_query("DELETE FROM board_dislikes WHERE board_id = %s AND member_id = %s",
-                          (board_id, session['user_id']))
+            execute_query("DELETE FROM board_dislikes WHERE board_id = %s AND member_id = %s", (board_id, user_id))
             is_disliked = False
         else:
-            # 안 눌렀다면 -> 추가 (싫어요)
-            execute_query("INSERT INTO board_dislikes (board_id, member_id) VALUES (%s, %s)",
-                          (board_id, session['user_id']))
+            # 🔥 [핵심] 싫어요를 추가하기 전에, 좋아요가 되어 있다면 삭제
+            execute_query("DELETE FROM board_likes WHERE board_id = %s AND member_id = %s", (board_id, user_id))
+            execute_query("INSERT INTO board_dislikes (board_id, member_id) VALUES (%s, %s)", (board_id, user_id))
             is_disliked = True
 
-        # 4. 개수 집계 (board_dislikes 테이블 카운트)
-        count_res = fetch_query("SELECT COUNT(*) as cnt FROM board_dislikes WHERE board_id = %s", (board_id,), one=True)
-        dislike_count = count_res['cnt'] if count_res else 0
+        # 양쪽 개수 모두 집계
+        l_res = fetch_query("SELECT COUNT(*) as cnt FROM board_likes WHERE board_id = %s", (board_id,), one=True)
+        d_res = fetch_query("SELECT COUNT(*) as cnt FROM board_dislikes WHERE board_id = %s", (board_id,), one=True)
 
         return jsonify({
             'success': True,
             'is_disliked': is_disliked,
-            'dislike_count': dislike_count
+            'like_count': l_res['cnt'] if l_res else 0,
+            'dislike_count': d_res['cnt'] if d_res else 0  # 좋아요 개수도 함께 전달
         })
-
     except Exception as e:
-        # 에러 발생 시 JSON 응답 반환
-        print(f"Database Error: {e}")
-        return jsonify({
-            'success': False,
-            'message': f"데이터베이스 오류가 발생했습니다: {str(e)}"
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # 댓글 기능
 @board_bp.route('/comment/<int:board_id>', methods = ['POST'])
@@ -459,3 +513,35 @@ def board_report(board_id):
     except Exception as e:
         print(f"Database Error: {e}")
         return jsonify({'success': False, 'message': '서버 오류 발생'}), 500
+
+# 게시물 스크랩 기능 추가
+@board_bp.route('/view/scrap/<int:board_id>', methods=['POST'])
+def board_scrap_toggle(board_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': '로그인이 필요합니다.'}), 401
+
+    user_id = session['user_id']
+    try:
+        # 이미 스크랩했는지 확인
+        check_sql = "SELECT id FROM board_scrap WHERE board_id = %s AND member_id = %s"
+        already_scrapped = fetch_query(check_sql, (board_id, user_id), one=True)
+
+        if already_scrapped:
+            # 스크랩 취소
+            execute_query("DELETE FROM board_scrap WHERE board_id = %s AND member_id = %s", (board_id, user_id))
+            is_scrapped = False
+            msg = "스크랩이 취소되었습니다."
+        else:
+            # 스크랩 추가
+            execute_query("INSERT INTO board_scrap (board_id, member_id) VALUES (%s, %s)", (board_id, user_id))
+            is_scrapped = True
+            msg = "게시글을 스크랩하였습니다."
+
+        return jsonify({
+            'success': True,
+            'is_scrapped': is_scrapped,
+            'message': msg
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+

@@ -95,7 +95,7 @@
     </script>
     {% else %}
 
-    <form action="/board/write" method="POST" id="writeForm">
+    <form action="/board/write" method="POST" id="writeForm" enctype="multipart/form-data">
         <div class="p-4 pt-5 pb-4 rounded-4 shadow-sm" style="background-color: #b8e5e04A; border-left: 5px solid var(--primary-teal);">
 
             <div class="d-flex align-items-center mb-4">
@@ -132,10 +132,19 @@
                 <textarea id="summernote" name="content" required></textarea>
             </div>
 
+            <div class="d-flex align-items-center mb-4 p-3 rounded-3" style="background-color: #fff; border: 1px dashed #dee2e6;">
+                <label class="form-label fw-bold text-muted mb-0 me-3" style="white-space: nowrap; min-width: 70px;">
+                    <i class="bi bi-paperclip"></i> 파일 첨부
+                </label>
+                <input type="file" name="file" id="postFile" class="form-control form-control-sm border-0 shadow-none"
+                       style="background-color: #f8f9fa; border-radius: 8px;">
+            </div>
+
+            <hr class="mt-4 mb-3" style="border-top: 1px solid #dee2e6; opacity: 0.5;">
             <hr class="mt-4 mb-3" style="border-top: 1px solid #dee2e6; opacity: 0.5;">
 
             <div class="d-flex justify-content-end align-items-center gap-2 py-4">
-                <a href="/board" class="btn btn-light px-4 py-2 rounded-pill fw-bold shadow-sm"
+                <a href="/board/list" class="btn btn-light px-4 py-2 rounded-pill fw-bold shadow-sm"
                    style="color: #212529; border: 1px solid #dee2e6; background-color: #fff;">
                    취소
                 </a>

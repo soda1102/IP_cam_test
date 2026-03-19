@@ -79,7 +79,27 @@
     #report-detail:focus, #report-reason-select:focus {
     border-color: #20828A !important;
     box-shadow: 0 0 0 0.25rem rgba(32, 130, 138, 0.25) !important;
-}
+    }
+
+    /* 스크랩 버튼 커스텀 스타일 */
+    .btn-scrap-custom {
+        color: #20828a;
+        border-color: #20828a;
+        transition: all 0.2s;
+    }
+
+    .btn-scrap-custom:hover {
+        background-color: #20828a;
+        color: white;
+        border-color: #20828a;
+    }
+
+    /* 스크랩이 완료된 상태 (활성화) */
+    .btn-scrap-custom.active {
+        background-color: #20828a;
+        color: white;
+    }
+
 </style>
 
 <div class="container mt-5" style="max-width: 900px;">
@@ -116,8 +136,10 @@
         <div class="text-center mb-2">
             <div class="d-inline-flex gap-3 p-3 rounded-4" style="background-color: #fcfdfe;">
                 <button id="like-btn" class="btn reaction-btn {% if user_liked %}active{% endif %}" onclick="toggleLike({{ board.id }})">
-                    <span><i class="bi bi-heart-fill text-danger me-1"></i>좋아요 <span id="header-like-count">{{ board.likes }}</span></span>
+                    <i class="bi {% if user_liked %}bi-heart-fill{% else %}bi-heart{% endif %}" id="like-icon"></i>
+                    좋아요 <span id="like-count">{{ board.likes }}</span>
                 </button>
+
                 <button id="dislike-btn" class="btn reaction-btn {% if user_disliked %}active{% endif %}" onclick="toggleDislike({{ board.id }})">
                     <i class="bi {% if user_disliked %}bi-hand-thumbs-down-fill{% else %}bi-hand-thumbs-down{% endif %}" id="dislike-icon"></i>
                     싫어요 <span id="dislike-count">{{ board.dislikes }}</span>
@@ -135,9 +157,20 @@
                 {% if session.get('user_id') == board.member_id or session.get('user_role') == 'admin' %}
                 <a href="/board/delete/{{ board.id }}" class="btn btn-outline-danger rounded-pill px-4" onclick="return confirm('삭제하시겠습니까?')">삭제</a>
                 {% endif %}
-                {% if session.get('user_id') and session.get('user_id') != board.member_id %}
-                <button type="button" class="btn btn-link text-warning text-decoration-none fw-bold"
-                        data-bs-toggle="modal" data-bs-target="#reportModal">신고</button>
+                {% if session.get('user_id') %}
+                    <button id="scrap-btn"
+                            class="btn btn-scrap-custom rounded-pill px-4 fw-bold {% if user_scrapped %}active{% endif %}"
+                            onclick="toggleScrap({{ board.id }})">
+                        <i class="bi {% if user_scrapped %}bi-bookmark-fill{% else %}bi-bookmark{% endif %} me-1"></i>스크랩
+                    </button>
+                {% else %}
+                    <button class="btn btn-scrap-custom rounded-pill px-4 fw-bold"
+                            onclick="alert('로그인이 필요한 서비스입니다.');">
+                        <i class="bi bi-bookmark me-1"></i>스크랩
+                    </button>
+                {% endif %}
+                {% if session.get('user_id') and session.get('user_id')  != board.member_id %}
+                <button class="btn btn-link text-warning text-decoration-none fw-bold" data-bs-toggle="modal" data-bs-target="#reportModal">신고</button>
                 {% endif %}
             </div>
         </div>
@@ -189,25 +222,18 @@
 </div>
 
 <script>
-    // 1. 좋아요 기능
+    // 좋아요 클릭 함수
     function toggleLike(boardId) {
-        // 경로를 /board/view/like/ID 형태로 수정
-        fetch(`/board/view/like/${boardId}`, { method: 'POST' })
+        fetch(`/board/like/${boardId}`, { method: 'POST' })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                const btn = document.getElementById('like-btn');
-                const icon = document.getElementById('like-icon');
-                const countSpan = document.getElementById('like-count');
+                // 1. 좋아요 상태 업데이트
+                updateReactionUI('like', data.is_liked, data.like_count);
 
-                if(countSpan) countSpan.innerText = data.like_count;
-
-                if (data.is_liked) {
-                    btn.classList.add('active');
-                    icon.className = 'bi bi-heart-fill';
-                } else {
-                    btn.classList.remove('active');
-                    icon.className = 'bi bi-heart';
+                // 2. 만약 싫어요가 켜져 있었다면 꺼짐 (서버에서 이미 처리되었을 것임)
+                if (data.is_liked && data.dislike_count !== undefined) {
+                    updateReactionUI('dislike', false, data.dislike_count);
                 }
             } else {
                 alert(data.message);
@@ -215,30 +241,42 @@
         });
     }
 
-    // 2. 싫어요 기능
+    // 싫어요 클릭 함수
     function toggleDislike(boardId) {
         fetch(`/board/dislike/${boardId}`, { method: 'POST' })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                const btn = document.getElementById('dislike-btn');
-                const icon = document.getElementById('dislike-icon');
-                const countSpan = document.getElementById('dislike-count');
+                // 1. 싫어요 상태 업데이트
+                updateReactionUI('dislike', data.is_disliked, data.dislike_count);
 
-                if(countSpan) countSpan.innerText = data.dislike_count;
-
-                if (data.is_disliked) {
-                    btn.classList.add('active');
-                    icon.className = 'bi bi-hand-thumbs-down-fill';
-                } else {
-                    btn.classList.remove('active');
-                    icon.className = 'bi bi-hand-thumbs-down';
+                // 2. 만약 좋아요가 켜져 있었다면 꺼짐
+                if (data.is_disliked && data.like_count !== undefined) {
+                    updateReactionUI('like', false, data.like_count);
                 }
             } else {
                 alert(data.message);
-                if (data.message.includes("로그인")) location.href = "/login";
             }
         });
+    }
+
+    // UI를 통합 관리하는 함수 (코드 중복 방지)
+    function updateReactionUI(type, isActive, count) {
+        const btn = document.getElementById(`${type}-btn`);
+        const icon = document.getElementById(`${type}-icon`);
+        const countSpan = document.getElementById(`${type}-count`);
+        const headerLikeSpan = document.getElementById('header-like-count'); // 상단 헤더용
+
+        if (countSpan) countSpan.innerText = count;
+        if (type === 'like' && headerLikeSpan) headerLikeSpan.innerText = count;
+
+        if (isActive) {
+            btn.classList.add('active');
+            icon.className = (type === 'like') ? 'bi bi-heart-fill' : 'bi bi-hand-thumbs-down-fill';
+        } else {
+            btn.classList.remove('active');
+            icon.className = (type === 'like') ? 'bi bi-heart' : 'bi bi-hand-thumbs-down';
+        }
     }
 
     // 3. 댓글 및 답글 관련 함수
@@ -262,11 +300,21 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content: content, parent_id: parentId })
         })
-        .then(res => res.json())
+        .then(res => {
+            // [수정] 401 에러(비로그인) 시 알림창만 띄우고 종료
+            if (res.status === 401) {
+                alert("로그인이 필요한 서비스입니다.");
+                return;
+            }
+            return res.json();
+        })
         .then(data => {
+            if (!data) return;
+
             if (data.success) {
-                location.reload(); // 댓글 등록 후 새로고침
+                location.reload();
             } else {
+                // [수정] 서버 메시지만 띄우고 페이지 이동은 하지 않음
                 alert(data.message);
             }
         });
@@ -295,6 +343,36 @@
         }
     })
     .catch(err => alert("오류가 발생했습니다."));
+
+    // 스크랩기능
+    function toggleScrap(boardId) {
+    // [추가] 클라이언트 사이드에서 1차 체크 (세션 정보가 JS에 없을 수 있으므로 fetch 응답으로 처리)
+    fetch(`/board/view/scrap/${boardId}`, { method: 'POST' })
+    .then(res => {
+        if (res.status === 401) {
+            alert("로그인이 필요한 서비스입니다.");
+            return;
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data) return;
+        if (data.success) {
+            alert(data.message);
+            const btn = document.getElementById('scrap-btn');
+
+            // 버튼 상태 변경
+            if (data.is_scrapped) {
+                btn.classList.replace('btn-outline-warning', 'btn-warning');
+                btn.querySelector('i').className = 'bi bi-bookmark-fill me-1';
+            } else {
+                btn.classList.replace('btn-warning', 'btn-outline-warning');
+                btn.querySelector('i').className = 'bi bi-bookmark me-1';
+            }
+        } else {
+            alert(data.message);
+        }
+    });
 }
 </script>
 
