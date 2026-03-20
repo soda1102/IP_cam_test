@@ -6,7 +6,18 @@
 <style>
     /* 배경 페이지 전용 스타일 */
     .bg-section { padding: 80px 0; }
-    .point-text { color: var(--primary-teal); font-weight: 700; }
+    .point-text {
+        /* 기존 color 대신 background-color 사용 */
+        background-color: #20828a; /* 메인 페이지에서 사용하셨던 부드러운 노란색 계열 */
+        color: #ffffff;               /* 배경 위에서 잘 보이도록 글자색은 어두운 색으로 설정 */
+        font-weight: 700;
+
+        /* 강조 효과를 위한 추가 스타일 */
+        padding: 2px 8px;          /* 상하 2px, 좌우 8px 여백으로 형광펜 느낌 부여 */
+        border-radius: 5px;        /* 모서리를 살짝 둥글게 */
+        display: inline-block;     /* 여백이 글자 라인에 잘 반영되도록 설정 */
+        line-height: 1.2;
+    }
 
     .accent-card {
         border-left: 5px solid var(--primary-teal);
@@ -71,7 +82,7 @@
         <div class="col-lg-6 mb-4 mb-lg-0">
             <h2 class="h3 mb-4 fw-bold">운전자의 시야 제한과 사고 위험</h2>
             <p class="lh-lg">
-                산간 도로의 특성상 급커브와 터널이 많아 운전자의 시야 확보가 제한적인 상황에서,<br> <span class="text-danger fw-bold">갑작스러운 야생 동물의 출현은 대형 사고의 직접적인 원인</span>이 됩니다.
+                산간 도로의 특성상 급커브와 터널이 많아 운전자의 시야 확보가 제한적인 상황에서,<br> <span class="point-text">갑작스러운 야생 동물의 출현은 대형 사고의 직접적인 원인</span>이 됩니다.
             </p>
             <p class="lh-lg">
                 특히 야간이나 악천후 시에는 육안 식별이 더욱 어려워져, 동물의 생명뿐만 아니라 운전자의 급제동 및 <br>차선 이탈로 인한 연쇄 추돌 사고 등 치명적인 인명 피해로 이어지는 경우가 빈번합니다.

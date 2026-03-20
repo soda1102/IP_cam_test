@@ -34,13 +34,13 @@
         padding: 0;
     }
 
-.logo-main-box img {
-    width: auto;           /* 너비 자동 */
-    height: auto;          /* 높이 자동 */
-    max-width: 90%;        /* 박스 너비의 90%를 넘지 않음 */
-    max-height: 90%;       /* 박스 높이의 90%를 넘지 않음 */
-    object-fit: contain;   /* 비율 유지하며 전체 보여주기 */
-}
+    .logo-main-box img {
+        width: auto;           /* 너비 자동 */
+        height: auto;          /* 높이 자동 */
+        max-width: 90%;        /* 박스 너비의 90%를 넘지 않음 */
+        max-height: 90%;       /* 박스 높이의 90%를 넘지 않음 */
+        object-fit: contain;   /* 비율 유지하며 전체 보여주기 */
+    }
 
     /* 3. 컬러 팔레트 스타일 */
     .color-chip-container {
@@ -72,12 +72,38 @@
     .symbol-item:hover { transform: translateY(-5px); }
     .symbol-icon {
         font-size: 1.5rem;
-        color: var(--primary-teal);
+        color: black;
         margin-bottom: 15px;
         display: inline-block;
     }
 
     .lh-lg { line-height: 1.8; }
+
+
+    /* 포인트 박스 스타일 추가 */
+    .point-text {
+        background-color: #ffffff; /* 부드러운 노란색 배경 */
+        color: #20828a;           /* 진한 회색 글자색 */
+        font-weight: 700;
+        padding: 2px 8px;          /* 박스 안쪽 여백 */
+        border-radius: 5px;        /* 모서리 둥글게 */
+        display: inline-block;     /* 박스 형태 유지 */
+        line-height: 1.4;          /* 줄 간격 조절 */
+    }
+
+    /* 제목 배경색 강조 스타일 수정 */
+    .title-bg-teal {
+        background-color: #20828a;
+        color: white;
+        /* --- [수정] 글씨 크기와 여백 조정 --- */
+        font-size: 1.25rem;            /* 기존보다 작게 설정 (보통 1rem = 16px) */
+        padding: 2px 8px;           /* 위아래 여백을 줄여 박스를 슬림하게 함 */
+        /* ---------------------------------- */
+        border-radius: 4px;
+        font-weight: normal !important;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -96,7 +122,7 @@
     <div class="accent-card shadow-sm">
         <h2 class="h4 fw-bold mb-3">Brand Mission</h2>
         <p class="fs-5 lh-lg mb-0">
-            도(道)서관의 로고는 <strong>안전한 주행</strong>과 <strong>체계적인 정보 공유</strong>라는 두 가지 핵심 가치를 시각화했습니다. <br>
+            도(道)서관의 로고는 <span class="point-text">안전한 주행</span>과<span class="point-text">체계적인 정보 공유</span>라는 두 가지 핵심 가치를 시각화했습니다. <br>
             운전자의 손길과 기술의 보호가 만나는 접점을 현대적인 심볼로 표현했습니다.
         </p>
     </div>
@@ -104,19 +130,19 @@
     <div class="row g-4 mb-5 pb-5">
         <div class="col-md-6">
             <div class="symbol-item shadow-sm">
-                <div class="symbol-icon"><i class="bi bi-shield-check"></i> Symbol 01</div>
-                <h3 class="h5 fw-bold">Steering Wheel & Shield</h3>
+                <div class="symbol-icon"><i class="bi bi-shield-check"></i> Symbol 01</div> <br>
+                <h3 class="title-bg-teal">Steering Wheel & Shield</h3>
                 <p class="text-muted lh-lg mb-0">
-                    운전자의 손길이 닿는 <strong>스티어링 휠(Steering Wheel)</strong>과 위험으로부터 보호하는<br> <strong>방패</strong>의 형상을 결합하여, 안전한 주행을 지향하는 '도(道)서관'의 핵심 가치를 담았습니다.
+                    운전자의 손길이 닿는 스티어링 휠(Steering Wheel)과 위험으로부터 보호하는<br> 방패의 형상을 결합하여, 안전한 주행을 지향하는 '도(道)서관'의 핵심 가치를 담았습니다.
                 </p>
             </div>
         </div>
         <div class="col-md-6">
             <div class="symbol-item shadow-sm">
-                <div class="symbol-icon"><i class="bi bi-book"></i> Symbol 02</div>
-                <h3 class="h5 fw-bold">Road & Archive</h3>
+                <div class="symbol-icon"><i class="bi bi-book"></i> Symbol 02</div> <br>
+                <h3 class="title-bg-teal">Road & Archive</h3>
                 <p class="text-muted lh-lg mb-0">
-                    로고 중앙을 관통하는 <strong>도로</strong>와 이를 감싸는 <strong>책(도서)</strong>의 실루엣은 <br> 도로 위의 지식과 정보를 체계적으로 관리하는 정보 창고의 의미를 상징합니다.
+                    로고 중앙을 관통하는 도로와 이를 감싸는 책(도서)의 실루엣은 <br> 도로 위의 지식과 정보를 체계적으로 관리하는 정보 창고의 의미를 상징합니다.
                 </p>
             </div>
         </div>
