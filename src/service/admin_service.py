@@ -172,11 +172,11 @@ class AdminService:
         conn = Session.get_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute("""
-                                UPDATE members
-                                SET active=0
-                                WHERE id=%s
-                            """, (member_id,))
+                # 현재 active 값 조회 후 반전
+                cursor.execute("SELECT active FROM members WHERE id=%s", (member_id,))
+                row = cursor.fetchone()
+                new_active = 0 if row['active'] == 1 else 1
+                cursor.execute("UPDATE members SET active=%s WHERE id=%s", (new_active, member_id))
             conn.commit()
             return True
         except Exception as e:

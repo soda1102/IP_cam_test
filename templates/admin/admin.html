@@ -573,7 +573,7 @@
                     <div class="stat-change up">↑ 오늘 +{{ new_members }}명</div>
                 </div>
                 <div class="stat-card warning">
-                    <div class="stat-label">신규 게시글</div>
+                    <div class="stat-label">전체 게시글</div>
                     <div class="stat-value">{{ boards|length }}</div>
                     <div class="stat-change up">↑ 오늘 + {{ new_boards }}개</div>
                 </div>
@@ -678,15 +678,15 @@
     <button class="topbar-btn primary" onclick="openModal('member')">+ 추가</button>
 </div>
     <div class="panel">
-        <table class="data-table">
+        <table class="data-table" style="table-layout: fixed;">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>UID</th>
-                    <th>이름</th>
-                    <th>등급</th>
-                    <th>가입일</th>
-                    <th>상태</th>
+                    <th style="width:60px;">ID</th>
+                    <th style="width:120px;">UID</th>
+                    <th style="width:100px;">이름</th>
+                    <th style="width:70px;">등급</th>
+                    <th style="width:100px;">가입일</th>
+                    <th style="width:70px;">상태</th>
                     <th style="width:160px;min-width:160px;">관리</th>
                 </tr>
             </thead>
@@ -698,15 +698,19 @@
     data-role="{{ member['role'] }}"
     data-active="{{ 1 if member['active'] else 0 }}">
     <td style="color:var(--text-muted);font-size:.78rem">#{{ member['id'] }}</td>
-    <td>{{ member['uid'] }}</td>
-    <td><strong>{{ member['name'] }}</strong></td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        {{ member['uid'] }}
+    </td>
+    <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        <strong>{{ member['name'] }}</strong>
+    </td>
     <td>
         {% if member['role'] == 'admin' %}
-            <span class="badge badge-notice">도</span>
+            <span class="badge rounded-pill" style="background-color: #dc3545; color:#FFFFFF">도</span>
         {% elif member['role'] == 'manager' %}
-            <span class="badge badge-warning">레</span>
+            <span class="badge" style="background-color: #fd8a69; color: #000000;">레</span>
         {% else %}
-            <span class="badge badge-success">미</span>
+            <span class="badge" style="background-color: #b8e5e0; color: #20828a;">미</span>
         {% endif %}
     </td>
     <td style="color:var(--text-muted)">{{ member['created_at'].strftime('%Y.%m.%d') }}</td>
@@ -764,18 +768,18 @@
     </div>
 
     <div class="panel">
-        <table class="data-table">
+        <table class="data-table" style="table-layout: fixed;">
             <thead>
                 <tr>
-                    <th>번호</th>
-                    <th>카테고리</th>
-                    <th>제목</th>
-                    <th>작성자</th>
-                    <th>작성일</th>
-                    <th>조회수</th>
-                    <th>신고수</th>
-                    <th>상태</th>
-                    <th style="width:200px;min-width:200px;">관리</th>
+                    <th style="width:60px;">번호</th>
+                    <th style="width:70px;">카테고리</th>
+                    <th style="width:280px;">제목</th>
+                    <th style="width:80px;">작성자</th>
+                    <th style="width:90px;">작성일</th>
+                    <th style="width:60px;">조회수</th>
+                    <th style="width:60px;">신고수</th>
+                    <th style="width:70px;">상태</th>
+                    <th style="width:220px;min-width:220px;">관리</th>
                 </tr>
             </thead>
             <tbody>
@@ -794,7 +798,9 @@
                         <span class="badge badge-review">일반</span>
                     {% endif %}
                 </td>
-                <td><strong>{{ board['title'] }}</strong></td>
+                <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <strong>{{ board['title'] }}</strong>
+                </td>
                 <td>{{ board['author'] or '탈퇴회원' }}</td>
                 <td style="color:var(--text-muted)">{{ board['created_at'].strftime('%Y.%m.%d') }}</td>
                 <td style="color:var(--text-muted)">{{ board['visits'] }}</td>
@@ -817,30 +823,18 @@
                 <td style="width:220px;min-width:220px;white-space:nowrap;">
                 {% if not board['active'] %}
                         <button class="action-btn" onclick="openBoardDetail({{ board['id'] }})">상세</button>
-                        <form method="POST" action="/admin/board/restore/{{ board['id'] }}" style="display:inline;">
-                        <button type="submit" class="action-btn">복구</button>
-                        </form>
+                        <button class="action-btn" onclick="boardAction('/admin/board/restore/{{ board['id'] }}')">복구</button>
                     {% elif board['report_count'] > 0 %}
                         <button class="action-btn" onclick="openBoardDetail({{ board['id'] }})">상세</button>
-                        <form method="POST" action="/admin/board/unreport/{{ board['id'] }}" style="display:inline;">
-                            <button type="submit" class="action-btn">신고 해제</button>
-                        </form>
-                        <form method="POST" action="/admin/board/hide/{{ board['id'] }}" style="display:inline;">
-                            <button type="submit" class="action-btn danger">숨김</button>
-                        </form>
+                        <button class="action-btn" onclick="boardAction('/admin/board/unreport/{{ board['id'] }}')">신고 해제</button>
+                        <button class="action-btn danger" onclick="boardAction('/admin/board/hide/{{ board['id'] }}')">숨김</button>
                     {% elif board['is_pinned'] %}
                         <button class="action-btn" onclick="openBoardDetail({{ board['id'] }})">상세</button>
-                        <form method="POST" action="/admin/board/hide/{{ board['id'] }}" style="display:inline;">
-                            <button type="submit" class="action-btn danger">숨김</button>
-                        </form>
+                       <button class="action-btn danger" onclick="boardAction('/admin/board/hide/{{ board['id'] }}')">숨김</button>
                     {% else %}
                         <button class="action-btn" onclick="openBoardDetail({{ board['id'] }})">상세</button>
-                        <form method="POST" action="/admin/board/pin/{{ board['id'] }}" style="display:inline;">
-                            <button type="submit" class="action-btn">공지 등록</button>
-                        </form>
-                        <form method="POST" action="/admin/board/hide/{{ board['id'] }}" style="display:inline;">
-                            <button type="submit" class="action-btn danger">숨김</button>
-                        </form>
+                        <button class="action-btn" onclick="boardAction('/admin/board/pin/{{ board['id'] }}')">공지 등록</button>
+                        <button class="action-btn danger" onclick="boardAction('/admin/board/hide/{{ board['id'] }}')">숨김</button>
                     {% endif %}
                 </td>
             </tr>
@@ -1302,6 +1296,68 @@ function applyPostPage(page) {
     });
 
     renderPagination('post-pagination', filtered.length, page, 'applyPostPage');
+}
+    async function boardAction(url) {
+    const res = await fetch(url, { method: 'POST' });
+    if (res.ok) {
+        showToast('✅ 처리되었습니다.');
+        // 테이블만 새로고침
+        const tableRes = await fetch(location.href);
+        const html = new DOMParser().parseFromString(await tableRes.text(), 'text/html');
+        document.querySelector('#page-posts .data-table tbody').innerHTML =
+            html.querySelector('#page-posts .data-table tbody').innerHTML;
+        filterPosts(); // 필터 상태 유지
+    } else {
+        showToast('❌ 처리 실패');
+    }
+}
+
+    // 회원 추가
+document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const res = await fetch(this.action, { method: 'POST', body: new FormData(this) });
+    if (res.ok) {
+        closeAddModalDirect();
+        showToast('✅ 회원이 추가되었습니다.');
+        await refreshMemberTable();
+    } else {
+        showToast('❌ 추가 실패');
+    }
+});
+
+// 회원 수정
+document.getElementById('editMemberForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const res = await fetch(this.action, { method: 'POST', body: new FormData(this) });
+    if (res.ok) {
+        closeEditModalDirect();
+        showToast('✅ 수정되었습니다.');
+        await refreshMemberTable();
+    } else {
+        showToast('❌ 수정 실패');
+    }
+});
+
+// 활성 여부 변경
+document.getElementById('deleteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const res = await fetch(this.action, { method: 'POST', body: new FormData(this) });
+    if (res.ok) {
+        closeDeleteModalDirect();
+        showToast('✅ 변경되었습니다.');
+        await refreshMemberTable();
+    } else {
+        showToast('❌ 변경 실패');
+    }
+});
+
+// 테이블 갱신 공통 함수
+async function refreshMemberTable() {
+    const tableRes = await fetch(location.href);
+    const html = new DOMParser().parseFromString(await tableRes.text(), 'text/html');
+    document.querySelector('#page-members .data-table tbody').innerHTML =
+        html.querySelector('#page-members .data-table tbody').innerHTML;
+    filterMembers();
 }
 </script>
 </body>

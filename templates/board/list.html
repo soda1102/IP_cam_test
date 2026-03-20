@@ -80,8 +80,18 @@
     .page-link { color: #495057 !important; background-color: #fff !important; border: 1px solid #dee2e6 !important; }
     .page-item.active .page-link { background-color: var(--primary-teal) !important; border-color: var(--primary-teal) !important; color: white !important; }
 
-    /* 공지글 줄에 마우스 올렸을 때 살짝 더 진해지게 효과 주기 */
-    .pinned-row:hover {
+    /* 공지사항(pinned-row) 배경색 강제 적용 */
+    .table tr.pinned-row {
+        background-color: rgba(184, 229, 224, 0.4) !important;
+    }
+
+    /* 공지사항 줄의 모든 칸(td) 배경색도 투명하게 맞춰야 색이 비쳐보여 */
+    .table tr.pinned-row td {
+        background-color: transparent !important;
+    }
+
+    /* 마우스 올렸을 때(Hover) 색상 살짝 더 진하게 (선택사항) */
+    .table tr.pinned-row:hover {
         background-color: rgba(184, 229, 224, 0.8) !important;
     }
 </style>
@@ -150,7 +160,7 @@
                 <tbody>
                     {% for board in boards %}
                     <tr onclick="location.href='/board/view/{{ board.id }}'"
-                        style="cursor: pointer; transition: background-color 0.2s; {% if board.is_pinned == 1 %}background-color: rgba(184, 229, 224, 0.6) !important;{% endif %}"
+                        style="cursor: pointer; transition: background-color 0.2s;"
                         class="{% if board.is_pinned == 1 %}pinned-row{% endif %}">
 
                         <td class="text-start ps-3">
@@ -170,13 +180,12 @@
 
                                 <span class="title-link {% if board.is_pinned == 1 %}fw-bold text-dark{% endif %} {% if board.active == 0 %}text-decoration-line-through text-muted{% endif %}">
                                     {{ board.title }}
-                                </span>
-
-                                {% if board.file_count > 0 %}
+                                    {% if board.file_count > 0 %}
                                     <span class="ms-1 text-muted" title="첨부파일 있음">
                                         <i class="bi bi-paperclip" style="transform: rotate(45deg); display: inline-block;"></i>
                                     </span>
                                 {% endif %}
+                                </span>
                             </div>
                         </td>
                         <td class="small {% if board.active == 0 %}text-muted{% endif %}">{{ board.writer_name }}</td>

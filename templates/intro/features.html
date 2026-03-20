@@ -66,6 +66,17 @@
     .feature-section {
         margin-bottom: 120px;
     }
+
+/* 제목 배경색 강조 스타일 (굵기 및 크기 유지 버전) */
+    .title-bg-teal {
+        background-color: #20828a;
+        color: white !important;   /* 배경 위에서 글씨는 무조건 하얗게 */
+        padding: 2px 10px;         /* 박스 여백 */
+        border-radius: 6px;        /* 모서리 살짝 둥글게 */
+        display: inline-block;     /* 텍스트 길이만큼 배경색 적용 */
+        margin-bottom: 5px;
+        /* font-weight와 font-size를 여기서 지정하지 않으면 부모인 h3의 속성을 그대로 따릅니다. */
+    }
 </style>
 {% endblock %}
 
@@ -99,12 +110,15 @@
                         <path d="m2.165 15.803.02-.004c1.83-.363 2.948-.842 3.468-1.105C6.054 14.86 6.744 15 7.5 15c3.59 0 6.5-2.462 6.5-5.5S11.09 4 7.5 4a6.52 6.52 0 0 0-4.04 1.385C1.868 6.45 1 8.163 1 10c0 1.278.435 2.505 1.165 3.803Z"/>
                     </svg>
             </div>
-            <h3 class="fw-bold mb-3">도(道)와주세요 <span class="text-muted fs-5">(Solution Archive)</span></h3>
+            <h3 class="fw-bold mb-3">
+                <span class="title-bg-teal">도(道)와주세요</span>
+                <span class="text-muted fs-5">(Solution Archive)</span>
+            </h3>
             <p class="lh-lg">
-                <span class="point-text">YOLOv11 딥러닝 모델</span>을 기반으로 도로 위의 <br> 야생동물(고라니, 멧돼지 등)과 낙하물을 실시간으로 감지합니다.
+                YOLOv11 딥러닝 모델을 기반으로 도로 위의 <br> 야생동물(고라니, 멧돼지 등)과 낙하물을 실시간으로 감지합니다.
             </p>
             <p class="lh-lg">
-                분석된 데이터는 단순한 경고를 넘어 <span class="point-text">사고 다발 구역 예보 시스템</span>으로 시각화되어, <br> 당신의 주행을 더 안전하게 가이드합니다.
+                분석된 데이터는 단순한 경고를 넘어 사고 다발 구역 예보 시스템으로 시각화되어, <br> 당신의 주행을 더 안전하게 가이드합니다.
             </p>
         </div>
         <div class="col-lg-6">
@@ -125,13 +139,16 @@
                 </div>
             </div>
 
-            <h3 class="fw-bold mb-3">도(道)란도란 <span class="text-muted fs-5">(Communication Hub)</span></h3>
-            <p class="lh-lg text-primary fw-bold">"운전자의 생생한 목소리가 모이는 곳"</p>
+            <h3 class="fw-bold mb-3">
+                <span class="title-bg-teal">도(道)란도란</span>
+                <span class="text-muted fs-5">(Communication Hub)</span>
+            </h3>
+            <p class="lh-lg fw-bold">"운전자의 생생한 목소리가 모이는 곳"</p>
             <p class="lh-lg">
                 '도란도란'은 길(道) 위에서 일어나는 소소한 이야기부터 실시간 교통 상황까지, <br>운전자들이 자유롭게 소통하는 커뮤니티 공간입니다.
             </p>
             <p class="lh-lg">
-                <span class="point-text">베테랑 운전자들의 노하우</span>를 배우고,<br> 오늘 내가 겪은 도로 위의 상황을 이웃 운전자들과 나누어 보세요.
+                베테랑 운전자들의 노하우를 배우고,<br> 오늘 내가 겪은 도로 위의 상황을 이웃 운전자들과 나누어 보세요.
             </p>
         </div>
 
@@ -151,13 +168,16 @@
                         <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.652-.689-1.782-.886-3.112-.752-1.234.124-2.503.523-3.388.893V2.828zm7.5.752c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.885-.37-2.154-.769-3.388-.893-1.33-.134-2.458.063-3.112.752V3.58z"/>
                     </svg>
             </div>
-            <h3 class="fw-bold mb-3">도(道)움말 <span class="text-muted fs-5">(Safety Driving Tips)</span></h3>
-            <p class="lh-lg text-success fw-bold">"베테랑 운전자도 놓치기 쉬운 상황별 안전 수칙"</p>
+            <h3 class="fw-bold mb-3">
+                <span class="title-bg-teal">도(道)움말</span>
+                <span class="text-muted fs-5">(Safety Driving Tips)</span>
+            </h3>
+            <p class="lh-lg fw-bold">"베테랑 운전자도 놓치기 쉬운 상황별 안전 수칙"</p>
             <p class="lh-lg">
-                도(道)움말은 도로 위에서 마주할 수 있는 다양한 위험 상황에 대비해, <br>꼭 알아두어야 할 <span class="point-text">핵심 안전 수칙</span>을 안내합니다.
+                도(道)움말은 도로 위에서 마주할 수 있는 다양한 위험 상황에 대비해, <br>꼭 알아두어야 할 핵심 안전 수칙을 안내합니다.
             </p>
             <p class="lh-lg">
-                직관적인 <span class="point-text">포스터 이미지</span>와 함께 음주운전 금지, 안전벨트, 졸음운전 예방 등 <br>항목별 수칙을 토글 형식으로 제공하여 한눈에 확인하실 수 있습니다.
+                직관적인 포스터 이미지와 함께 음주운전 금지, 안전벨트, 졸음운전 예방 등 <br>항목별 수칙을 토글 형식으로 제공하여 한눈에 확인하실 수 있습니다.
             </p>
         </div>
         <div class="col-lg-6">

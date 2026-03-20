@@ -40,12 +40,14 @@
                     </a>
                 {% else %}
                     <div class="d-flex align-items-center bg-light px-3 py-1 rounded-pill border shadow-sm">
-                        {% if session.get('user_role') == 'admin' %}
-                            <span class="badge rounded-pill bg-danger me-2" style="font-size: 0.7rem;">관리자</span>
+                        {% set role = session.get('user_role') %}
+                        {% if role == 'admin' %}
+                            <span class="badge rounded-pill bg-danger me-2" style="font-size: 0.7rem;">도(관리자)</span>
+                        {% elif role == 'manager' %}
+                            <span class="badge rounded-pill text-dark me-2" style="background-color : #fd8a69; font-size: 0.7rem;">레(매니저)</span>
                         {% else %}
-                            <span class="badge rounded-pill me-2" style="background-color: var(--primary-teal); font-size: 0.7rem;">일반</span>
+                            <span class="badge rounded-pill me-2" style="background-color: var(--primary-teal); font-size: 0.7rem;">미(일반)</span>
                         {% endif %}
-
                         <span class="small text-dark fw-bold">
                             {{ session.get('user_name') }}<span class="fw-normal text-muted">님</span>
                         </span>

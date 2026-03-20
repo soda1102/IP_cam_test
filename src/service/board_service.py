@@ -2,9 +2,10 @@ import os
 import bleach
 import cloudinary
 import cloudinary.uploader
+import requests
 
 from math import ceil
-from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify
+from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify, Response
 from src.common import Session, login_required
 from src.common.db import fetch_query, execute_query
 from src.domain import Board
@@ -245,10 +246,11 @@ def board_view(board_id):
     raw_files = fetch_query("SELECT * FROM files WHERE board_id = %s", (board_id,))
     files = []
     for f in raw_files:
-        info = get_file_info(f['file_path'])  # file_path = Cloudinary URL
+        info = get_file_info(f['file_path'])
         if info:
             info['origin_name'] = f['origin_name']
             info['file_size'] = f['file_size']
+            info['file_id'] = f['id']  # ✅ 프록시 라우트용 id 추가
             files.append(info)
 
     return render_template('board/view.html',
@@ -257,6 +259,23 @@ def board_view(board_id):
                            user_liked=user_liked,
                            user_disliked=user_disliked,
                            comments=root_comments)
+
+
+@board_bp.route('/download/<int:file_id>')
+def download_file(file_id):
+    f = fetch_query("SELECT * FROM files WHERE id = %s", (file_id,), one=True)
+    if not f:
+        return "파일 없음", 404
+
+    response = requests.get(f['file_path'])
+    return Response(
+        response.content,
+        headers={
+            'Content-Disposition': f'attachment; filename="{f["origin_name"]}"',
+            'Content-Type': response.headers['Content-Type']
+        }
+    )
+
 
 # 게시물 수정
 @board_bp.route('/edit/<int:board_id>', methods = ['GET', 'POST'])
@@ -445,6 +464,8 @@ def upload_image():
 def board_report(board_id):
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': '로그인이 필요합니다.'}), 401
+
+    print('board_id :', board_id)
 
     data = request.get_json()
     reason = data.get('reason')
