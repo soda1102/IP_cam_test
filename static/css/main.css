@@ -6,6 +6,10 @@
     --underline : #fff5d7;
     --highlight : #fd8a69
 }
+html {
+    overflow-y: scroll; /* 스크롤바를 항상 표시해서 레이아웃 shift 방지 */
+}
+
 
 body {
     font-family: 'Pretendard', sans-serif;
