@@ -1,5 +1,5 @@
 # 1. 필요한 패키지 설치
-# !pip install ultralytics roboflow matplotlib pandas
+# %pip install ultralytics roboflow matplotlib pandas
 
 # =============================================
 # ⬇️ 조원마다 여기 MODEL_NAME 만 바꾸면 됨!

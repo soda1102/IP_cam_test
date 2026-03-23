@@ -5,6 +5,7 @@ from .board_service import board_bp
 from .admin_service import admin_bp
 from .faq_service import faq_bp
 from .tip_service import tip_bp
+from .ai_model_service import model_bp
 
 # 외부에서 접근하기 편하게 리스트업
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     'board_bp',
     'admin_bp',
     'faq_bp',
-    'tip_bp'
+    'tip_bp',
+    'model_bp'
 ]
