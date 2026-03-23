@@ -251,7 +251,7 @@
         .data-table th {
             background: #f8fafa;
             padding: 12px 20px;
-            text-align: left;
+            text-align: center;
             font-size: 0.75rem;
             font-weight: 700;
             color: var(--text-muted);
@@ -270,6 +270,7 @@
             font-weight: 500;
             vertical-align: middle;
             overflow: hidden;
+            text-align : center;
         }
         .data-table tr:last-child td { border-bottom: none; }
         .data-table tr:hover td { background: #f8fffe; }
@@ -785,7 +786,7 @@
             <thead>
                 <tr>
                     <th style="width:60px;">번호</th>
-                    <th style="width:70px;">카테고리</th>
+                    <th style="width:80px;">카테고리</th>
                     <th style="width:280px;">제목</th>
                     <th style="width:80px;">작성자</th>
                     <th style="width:90px;">작성일</th>
@@ -1075,6 +1076,7 @@
                     🕐 <span id="detail_created_at"></span>
                     &nbsp;·&nbsp;
                     👁 <span id="detail_visits"></span>회
+                    &nbsp;·&nbsp;
                 </div>
             </div>
             <button onclick="closeBoardDetail()"
