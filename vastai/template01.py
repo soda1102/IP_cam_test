@@ -40,24 +40,11 @@ else:
 # =============================================
 rf = Roboflow(api_key="여기에_API_KEY_입력")
 project = rf.workspace("워크스페이스_이름").project("프로젝트_이름")
-version = project.version(1)
-dataset = version.download("yolov11")
+version = project.version(4)
+dataset = version.download("coco")
 
 # data.yaml 없을 경우 자동 생성
 yaml_path = f"{dataset.location}/data.yaml"
-if not os.path.exists(yaml_path):
-    print("data.yaml 없음 → 자동 생성")
-    yaml_content = {
-        'path': dataset.location,
-        'train': 'train/images',
-        'val': 'valid/images',
-        'test': 'test/images',
-        'nc': 3,  # ← 클래스 수 맞게 수정
-        'names': ['클래스1', '클래스2', '클래스3']  # ← 클래스명 맞게 수정
-    }
-    with open(yaml_path, 'w') as f:
-        yaml.dump(yaml_content, f, allow_unicode=True)
-    print(f"data.yaml 생성 완료: {yaml_path}")
 
 # =============================================
 # 4. 학습 (시간 측정 포함)
