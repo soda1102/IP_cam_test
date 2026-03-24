@@ -160,6 +160,25 @@
                             <i class="bi bi-exclamation-circle"></i> 비밀번호 미입력 시 기존 비밀번호가 유지됩니다.
                         </p>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">생년월일</label>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <input type="number" id="birth_year" name="birth_year" class="form-control"
+                                           placeholder="YYYY년" required min="1900"
+                                           max="{{ year_now }}">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" id="birth_month" name="birth_month" class="form-control"
+                                           placeholder="MM월" required min="1" max="12">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" id="birth_day" name="birth_day" class="form-control"
+                                           placeholder="DD일" required min="1" max="31">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="btn-group-custom">
                             <button type="submit" class="btn btn-submit">수정 완료</button>
                             <a href="/mypage" class="btn btn-cancel">취소</a>

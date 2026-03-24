@@ -34,7 +34,6 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 
-
 # Cache 설정
 cache = Cache(config={'CACHE_TYPE': 'simple'})
 cache.init_app(app)

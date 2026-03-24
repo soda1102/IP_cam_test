@@ -54,12 +54,12 @@ def mypage():
 
     board_count = count_data['total_cnt'] if count_data else 0
     reported_count = count_data['reported_cnt'] if count_data else 0
-
     # 3. render_template 시 user 객체를 통째로 넘기면 user.profile_img를 HTML에서 쓸 수 있습니다.
     return render_template('mypage/info.html',
                            user=user,
                            board_count=board_count,
                            reported_count=reported_count)
+
 
 # 회원 정보 수정
 @mypage_bp.route('/edit', methods=['GET', 'POST'])
@@ -69,10 +69,13 @@ def member_edit():
         user = fetch_query("SELECT * FROM members WHERE id = %s", (session['user_id'],), one=True)
         return render_template('mypage/edit.html', user=user)
 
-    # POST 요청 (정보 수정)
+    # 1. 폼 데이터 가져오기
     new_name = request.form.get('name')
     new_nickname = request.form.get('nickname')
     new_pw = request.form.get('password')
+    b_year = request.form.get('birth_year')
+    b_month = request.form.get('birth_month')
+    b_day = request.form.get('birth_day')
 
     try:
         set_clauses = []
@@ -90,18 +93,28 @@ def member_edit():
             set_clauses.append("password = %s")
             params.append(new_pw)
 
-        if set_clauses:  # 변경할 항목이 하나라도 있을 때만 실행
+        # 2. 생년월일 처리 로직
+        if b_year and b_month and b_day:
+
+            full_birthday = f"{b_year}-{b_month.zfill(2)}-{b_day.zfill(2)}"
+            set_clauses.append("birthdate = %s")
+            params.append(full_birthday)
+
+        if set_clauses:
+
             params.append(session['user_id'])
             sql = f"UPDATE members SET {', '.join(set_clauses)} WHERE id = %s"
             execute_query(sql, tuple(params))
 
+        # 3. 세션 갱신 (선택사항)
         session['user_name'] = new_name
         session['user_nickname'] = new_nickname
+
         return "<script>alert('수정 완료');location.href='/mypage';</script>"
 
     except Exception as e:
         print(f"수정 에러: {e}")
-        return "수정 중 오류 발생"
+        return "<script>alert('수정 중 오류 발생');history.back();</script>"
 
 # 프로필
 @mypage_bp.route('/profile/upload', methods=['POST'])
