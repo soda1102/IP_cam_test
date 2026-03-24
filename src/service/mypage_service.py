@@ -232,7 +232,7 @@ def my_activity():
     # 4 - 6. 차단 목록
     my_blocks = fetch_query("""
             SELECT b.*, m.name as blocked_name 
-            FROM user_blocks b
+            FROM blocks b
             JOIN members m ON b.blocked_id = m.id
             WHERE b.blocker_id = %s
             ORDER BY b.created_at DESC
@@ -285,3 +285,17 @@ def delete_account():
 
     except Exception as e:
         return f"<script>alert('탈퇴 처리 중 오류가 발생했습니다: {str(e)}'); history.back();</script>"
+
+# 차단 목록
+@mypage_bp.route('/my_activity/unblock/<int:blocked_id>')
+@login_required
+def unblock_user(blocked_id):
+    user_id = session.get('user_id')
+
+    # 1. 차단 해제 쿼리 실행 (테이블명이 blocks이므로)
+    # execute_query 같은 함수가 있다면 그걸 사용해 형!
+    query = "DELETE FROM blocks WHERE blocker_id = %s AND blocked_id = %s"
+    execute_query(query, (user_id, blocked_id))  # 형이 쓰는 DB 실행 함수로 변경
+
+    # 2. 차단 목록 탭으로 돌아가기 위해 URL 뒤에 #blocks를 붙여줌
+    return redirect(url_for('/my_activity/') + '#blocks')

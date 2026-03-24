@@ -226,8 +226,6 @@
                         <div class="empty-msg"><br><br><br>휴지통이 비어 있습니다.</div>
                     {% endif %}
                 </div>
-<<<<<<< HEAD
-=======
 
                 <div class="tab-pane fade" id="blocks">
                     {% if my_blocks %}
@@ -239,7 +237,7 @@
                                 </div>
                                 <div class="item-date">차단 일시: {{ block.created_at.strftime('%Y-%m-%d') }}</div>
                             </div>
-                            <button onclick="if(confirm('차단을 해제하시겠습니까?')){ location.href='/auth/unblock/{{ block.blocked_id }}' }"
+                            <button onclick="if(confirm('차단을 해제하시겠습니까?')){ location.href='/my_activity/unblock/{{ block.blocked_id }}#blocks' }"
                                     class="btn btn-sm btn-outline-secondary border-0">
                                 차단 해제
                             </button>
@@ -249,7 +247,28 @@
                         <div class="empty-msg"><br><br><br>차단한 사용자가 없습니다.</div>
                     {% endif %}
                 </div>
->>>>>>> feature/syk/member
+                <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    // 1. URL에 해시(#blocks 등)가 있으면 해당 탭을 활성화
+                    const hash = window.location.hash;
+                    if (hash) {
+                        const targetTab = document.querySelector(`button[data-bs-target="${hash}"]`);
+                        if (targetTab) {
+                            const tab = new bootstrap.Tab(targetTab);
+                            tab.show();
+                        }
+                    }
+
+                    // 2. 탭을 클릭할 때마다 주소창의 해시를 변경 (새로고침 시 유지용)
+                    const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+                    tabButtons.forEach(button => {
+                        button.addEventListener('shown.bs.tab', function (event) {
+                            const targetId = event.target.getAttribute('data-bs-target');
+                            history.replaceState(null, null, targetId);
+                        });
+                    });
+                });
+                </script>
             </div>
 
             <nav class="mt-5">
