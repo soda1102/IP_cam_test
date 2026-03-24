@@ -187,7 +187,7 @@ def my_activity():
     total_count = total_row['cnt']
     total_pages = math.ceil(total_count / per_page)
 
-    # 4. 실제 데이터 가져오기 (LIMIT와 OFFSET으로 페이지 자르기)
+    # 4 - 1. 작성한 게시물
     my_posts = fetch_query("""
         SELECT * FROM boards 
         WHERE member_id = %s AND active = 1 
@@ -195,7 +195,7 @@ def my_activity():
         LIMIT %s OFFSET %s
     """, (user_id, per_page, offset))
 
-    # 좋아요와 스크랩 데이터
+    # 4 - 2. 좋아요
     my_likes = fetch_query("""
         SELECT b.*, m.name as writer_name 
         FROM board_likes bl
@@ -204,6 +204,7 @@ def my_activity():
         WHERE bl.member_id = %s
     """, (user_id,))
 
+    # 4 - 3. 스크랩
     my_scraps = fetch_query("""
         SELECT b.*, bs.created_at as scrap_date 
         FROM board_scrap bs
@@ -211,7 +212,7 @@ def my_activity():
         WHERE bs.member_id = %s
     """, (user_id,))
 
-    # 내가 작성한 댓글 가져오기
+    # 4 - 4. 작성한 댓글
     my_comments = fetch_query("""
             SELECT c.*, b.title as board_title 
             FROM board_comments c
@@ -220,13 +221,22 @@ def my_activity():
             ORDER BY c.created_at DESC
         """, (user_id,))
 
-    # 휴지통 데이터 조회 (삭제 후 30일 계산 로직 포함)
+    # 4 - 5. 휴지통
     my_trash = fetch_query("""
         SELECT *, DATEDIFF(DATE_ADD(deleted_at, INTERVAL 30 DAY), NOW()) as remaining_days
         FROM boards 
         WHERE member_id = %s AND active = 0 AND deleted_at IS NOT NULL
         ORDER BY deleted_at DESC
     """, (user_id,))
+
+    # 4 - 6. 차단 목록
+    my_blocks = fetch_query("""
+            SELECT b.*, m.name as blocked_name 
+            FROM user_blocks b
+            JOIN members m ON b.blocked_id = m.id
+            WHERE b.blocker_id = %s
+            ORDER BY b.created_at DESC
+        """, (user_id,))
 
     # 5. HTML이 기다리고 있는 pagination 객체 만들기
     pagination_obj = {
@@ -238,13 +248,14 @@ def my_activity():
         'next_num': page + 1
     }
 
-    # 6. 템플릿으로 데이터 넘기기 (my_trash 추가됨)
+    # 6. 템플릿으로 데이터 전송
     return render_template('mypage/my_activity.html',
                            my_posts=my_posts,
                            my_likes=my_likes,
                            my_scraps=my_scraps,
                            my_comments=my_comments,
-                           my_trash=my_trash,  # 휴지통 변수 전달
+                           my_trash=my_trash,  
+                           my_blocks=my_blocks,
                            pagination=pagination_obj)
 
 # 회원 탈퇴
