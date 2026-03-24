@@ -739,6 +739,7 @@
         <button class="action-btn" onclick="openEditMemberModal(
             '{{ member['id'] }}',
             '{{ member['name'] }}',
+            '{{ member['nickname'] if member['nickname'] else '' }}',
             '{{ member['role'] }}',
             {{ member['active'] }},
             '{{ member['birthdate'] if member['birthdate'] else '' }}'
@@ -995,6 +996,10 @@
                 <input class="modal-input" type="text" name="name" placeholder="예: 홍길동" required>
             </div>
             <div class="modal-field">
+                <label class="modal-label">닉네임</label>
+                <input class="modal-input" type="text" name="nickname" placeholder="예: 형을형이라부르지못하고" required>
+            </div>
+            <div class="modal-field">
                 <label class="modal-label">비밀번호</label>
                 <input class="modal-input" type="password" name="password" placeholder="비밀번호 입력" required>
             </div>
@@ -1017,6 +1022,10 @@
             <div class="modal-field">
                 <label class="modal-label">이름</label>
                 <input class="modal-input" type="text" name="name" id="edit_name" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">닉네임</label>
+                <input class="modal-input" type="text" name="nickname" id="edit_nickname" required>
             </div>
             <div class="modal-field">
                 <label class="modal-label">새 비밀번호 <span style="font-weight:400;color:var(--text-muted)">(변경 시에만 입력)</span></label>
@@ -1162,9 +1171,10 @@
     document.getElementById('today-date').textContent = formatted + ' 기준 실시간 집계';
 
     /* ===== 회원 수정 모달 ===== */
-    function openEditMemberModal(id, name, role, active, birthdate) {
+    function openEditMemberModal(id, name, nickname, role, active, birthdate) {
     document.getElementById('editMemberForm').action = `/admin/member/update/${id}`;
     document.getElementById('edit_name').value      = name;
+    document.getElementById('edit_nickname').value  = nickname;
     document.getElementById('edit_password').value  = '';
     document.getElementById('edit_role').value      = role;
     document.getElementById('edit_active').value    = String(active);

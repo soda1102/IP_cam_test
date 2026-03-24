@@ -51,12 +51,13 @@ def delete_member(member_id):
 @admin_bp.route('/member/update/<int:member_id>', methods=['POST'])
 def update_member(member_id):
     name      = request.form.get('name')
+    nickname  = request.form.get('nickname')
     password  = request.form.get('password')   # 빈 문자열이면 변경 안 함
     role      = request.form.get('role')
     active    = request.form.get('active')     # '1' or '0'
     birthdate = request.form.get('birthdate')  # 'YYYY-MM-DD'
     birthdate = birthdate if birthdate else None
-    success = AdminService.update_member(member_id, name, password, role, active, birthdate)
+    success = AdminService.update_member(member_id, name, nickname, password, role, active, birthdate)
 
     if success:
         flash('멤버 정보가 수정되었습니다.', 'success')
@@ -68,10 +69,11 @@ def update_member(member_id):
 def add_member():
     uid       = request.form.get('uid')
     name      = request.form.get('name')
+    nickname  = request.form.get('nickname')
     password  = request.form.get('password')
     birthdate = request.form.get('birthdate')
 
-    success = AdminService.add_member(uid, name, password, birthdate)
+    success = AdminService.add_member(uid, name, nickname, password, birthdate)
     if success:
         flash('✅ 회원이 추가되었습니다.', 'success')
     else:
@@ -140,7 +142,7 @@ class AdminService:
         return len([m for m in members if m['created_at'] >= since])
 
     @classmethod
-    def update_member(cls, member_id, name, password, role, active, birthdate):
+    def update_member(cls, member_id, name, nickname, password, role, active, birthdate):
         conn = Session.get_connection()
         try:
             with conn.cursor() as cursor:
@@ -149,17 +151,17 @@ class AdminService:
                     # hashed_pw = hashlib.sha256(password.encode()).hexdigest()
                     cursor.execute("""
                         UPDATE members
-                        SET name=%s, password=%s, role=%s, active=%s, birthdate=%s
+                        SET name=%s, nickname=%s, password=%s, role=%s, active=%s, birthdate=%s
                         WHERE id=%s
-                    """,(name, password, role, active, birthdate, member_id))
+                    """,(name, nickname, password, role, active, birthdate, member_id))
                     # (name, hashed_pw, role, active, birthdate, member_id))
 
                 else:  # 비밀번호 미입력 시 기존 유지
                     cursor.execute("""
                         UPDATE members
-                        SET name=%s, role=%s, active=%s, birthdate=%s
+                        SET name=%s, nickname=%s, role=%s, active=%s, birthdate=%s
                         WHERE id=%s
-                    """, (name, role, active, birthdate, member_id))
+                    """, (name, nickname, role, active, birthdate, member_id))
             conn.commit()
             return True
         except Exception as e:
@@ -185,15 +187,15 @@ class AdminService:
             return False
 
     @classmethod
-    def add_member(cls, uid, name, password, birthdate):
+    def add_member(cls, uid, name, nickname, password, birthdate):
         conn = Session.get_connection()
         try:
             with conn.cursor() as cursor:
                 # TODO: 비밀번호 암호화 추후 적용
                 cursor.execute("""
-                    INSERT INTO members (uid, name, password, birthdate)
-                    VALUES (%s, %s, %s, %s)
-                """, (uid, name, password, birthdate if birthdate else None))
+                    INSERT INTO members (uid, name, nickname, password, birthdate)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (uid, name, nickname, password, birthdate if birthdate else None))
             conn.commit()
             return True
         except Exception as e:
