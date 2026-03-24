@@ -1,7 +1,7 @@
 from flask import (
     Blueprint,
     request, session, flash,
-    render_template, redirect, url_for
+    render_template, redirect, url_for,
 )
 
 from src.common import (
@@ -171,6 +171,7 @@ def profile_delete():
 @mypage_bp.route('/my_activity/')
 @login_required
 def my_activity():
+
     # 1. 로그인 확인 및 사용자 ID 가져오기
     user_id = session.get('user_id')
     if not user_id:
@@ -210,6 +211,23 @@ def my_activity():
         WHERE bs.member_id = %s
     """, (user_id,))
 
+    # 내가 작성한 댓글 가져오기
+    my_comments = fetch_query("""
+            SELECT c.*, b.title as board_title 
+            FROM board_comments c
+            JOIN boards b ON c.board_id = b.id
+            WHERE c.member_id = %s
+            ORDER BY c.created_at DESC
+        """, (user_id,))
+
+    # 휴지통 데이터 조회 (삭제 후 30일 계산 로직 포함)
+    my_trash = fetch_query("""
+        SELECT *, DATEDIFF(DATE_ADD(deleted_at, INTERVAL 30 DAY), NOW()) as remaining_days
+        FROM boards 
+        WHERE member_id = %s AND active = 0 AND deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+    """, (user_id,))
+
     # 5. HTML이 기다리고 있는 pagination 객체 만들기
     pagination_obj = {
         'page': page,
@@ -220,11 +238,13 @@ def my_activity():
         'next_num': page + 1
     }
 
-    # 6. 모든 데이터를 담아서 렌더링
+    # 6. 템플릿으로 데이터 넘기기 (my_trash 추가됨)
     return render_template('mypage/my_activity.html',
                            my_posts=my_posts,
                            my_likes=my_likes,
                            my_scraps=my_scraps,
+                           my_comments=my_comments,
+                           my_trash=my_trash,  # 휴지통 변수 전달
                            pagination=pagination_obj)
 
 # 회원 탈퇴

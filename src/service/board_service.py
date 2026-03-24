@@ -6,7 +6,7 @@ import requests
 import urllib.parse
 
 from math import ceil
-from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify, Response
+from flask import Blueprint, session, request, render_template, url_for, redirect, jsonify, Response, flash
 from src.common import Session, login_required
 from src.common.db import fetch_query, execute_query
 from src.domain import Board
@@ -315,13 +315,13 @@ def board_edit(board_id):
             print(e)
     return None
 
+
 # 게시물 삭제
 @board_bp.route('/delete/<int:board_id>')
 def board_delete(board_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    # 1. 게시글 존재 여부 및 정보 확인
     board_sql = 'SELECT * FROM boards WHERE id = %s'
     row = fetch_query(board_sql, (board_id,), one=True)
 
@@ -329,28 +329,29 @@ def board_delete(board_id):
         return '<script>alert("존재하지 않는 게시글입니다."); history.back();</script>'
 
     try:
-        # 2. 관리자(admin)인 경우: DB에서 아예 행을 삭제 (Hard Delete)
-        if session.get('user_role') == 'admin':
-            sql = "DELETE FROM boards WHERE id = %s"
-            execute_query(sql, (board_id,))
-            msg = "관리자 권한으로 게시글을 영구 삭제했습니다."
 
-        # 3. 일반 유저인 경우: 본인 글일 때만 active를 0으로 수정 (Soft Delete)
+        # 1. 관리자인 경우: 즉시 영구 삭제 (선택 사항)
+        if session.get('user_role') == 'admin':
+
+            execute_query("DELETE FROM boards WHERE id = %s", (board_id,))
+            msg = "관리자 권한으로 영구 삭제되었습니다."
+
+        # 2. 일반 유저: 본인 글인 경우 휴지통으로 이동 (Soft Delete)
         else:
-            # 본인 글인지 먼저 체크
+
             if row['member_id'] != session.get('user_id'):
                 return '<script>alert("삭제할 권한이 없습니다."); history.back();</script>'
 
-            # active 상태만 0으로 바꿔서 목록에서 숨김
-            sql = "UPDATE boards SET active = 0 WHERE id = %s AND member_id = %s"
-            execute_query(sql, (board_id, session['user_id']))
-            msg = "게시글이 삭제되었습니다."
+            # active=0 (비활성), deleted_at=NOW() (삭제 시간 기록)
+            sql = "UPDATE boards SET active = 0, deleted_at = NOW() WHERE id = %s"
+            execute_query(sql, (board_id,))
+            msg = "게시글이 휴지통으로 이동되었습니다. 30일 후 자동 삭제됩니다."
 
         return f"<script>alert('{msg}'); location.href='/board/list';</script>"
 
     except Exception as e:
         print(f'삭제 에러: {e}')
-        return "<script>alert('처리 중 오류가 발생했습니다.'); history.back();</script>"
+        return "<script>alert('처리 중 오류 발생'); history.back();</script>"
 
 # 좋아요 기능
 @board_bp.route('/like/<int:board_id>', methods = ['POST'])
@@ -576,4 +577,57 @@ def board_scrap_toggle(board_id):
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# 휴지통 목록 조회
+@board_bp.route('/trash')
+@login_required
+def board_trash():
+    user_id = session['user_id']
+    # 삭제된 지 30일 이내인 게시물만 조회
+    sql = """
+        SELECT *, DATEDIFF(DATE_ADD(deleted_at, INTERVAL 30 DAY), NOW()) as remaining_days
+        FROM boards 
+        WHERE member_id = %s AND active = 0 AND deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+    """
+    trash_posts = fetch_query(sql, (user_id,))
+    return render_template('board/trash.html', posts=trash_posts)
+
+# 휴지통에서 복구하기
+@board_bp.route('/restore/<int:board_id>')
+@login_required
+def board_restore(board_id):
+
+    sql = "UPDATE boards SET active = 1, deleted_at = NULL WHERE id = %s"
+    execute_query(sql, (board_id,))
+
+    flash("게시물이 성공적으로 복구되었습니다.")
+    return redirect(url_for('mypage.my_activity'))
+
+# 휴지통에서 즉시 영구 삭제
+@board_bp.route('/permanent_delete/<int:board_id>')
+@login_required
+def board_permanent_delete(board_id):
+    # 1. DB에서 해당 게시물을 완전히 삭제하는 쿼리
+    sql = "DELETE FROM boards WHERE id = %s"
+    execute_query(sql, (board_id,))
+
+    # 2. flash 기능을 쓰려면 상단에 'from flask import flash'가 있어야 합니다!
+    flash("게시물이 영구 삭제되었습니다.")
+    return redirect(url_for('mypage.my_activity'))
+
+# 30일 지난 게시물 자동 영구 삭제 함수
+def cleanup_old_trash():
+    try:
+        # active가 0이고 삭제된 지 30일이 넘은 데이터 삭제
+        sql = """
+            DELETE FROM boards 
+            WHERE active = 0 
+              AND deleted_at IS NOT NULL 
+              AND deleted_at < NOW() - INTERVAL 30 DAY
+        """
+        execute_query(sql)
+        print("휴지통 자동 청소 완료")
+    except Exception as e:
+        print(f"자동 삭제 중 오류 발생: {e}")
 
