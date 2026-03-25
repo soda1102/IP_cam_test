@@ -25,29 +25,35 @@ cloudinary.config(
     secure = True
 )
 
+# 글 쓰기
 @board_bp.route('/write', methods=['GET', 'POST'])
 @login_required
 def board_write():
     if request.method == 'GET':
+        # 1. URL 파라미터에서 카테고리를 읽어옵니다. (기본값 'free')
+        # 예: /board/write?category=qna -> current_category는 'qna'가 됨
+        current_category = request.args.get('category', 'free')
         is_admin = (session.get('user_role') == "admin")
-        return render_template('board/write.html', is_admin=is_admin)
+
+        return render_template('board/write.html',
+                               is_admin=is_admin,
+                               current_category=current_category)
 
     elif request.method == 'POST':
+        # 2. 사용자가 선택한(혹은 자동 선택된) 카테고리 값을 가져옵니다.
+        category = request.form.get('category')
         title = request.form.get('title')
         content = request.form.get('content')
         member_id = session.get('user_id')
 
-        # 1. Cloudinary 파일 업로드 로직
+        # [Cloudinary 파일 업로드 로직]
         file = request.files.get('file')
         file_info = None
-
         if file and file.filename != '':
             try:
-                # 파일 사이즈 추출
                 file.seek(0, os.SEEK_END)
                 f_size = file.tell()
                 file.seek(0)
-
                 upload_result = cloudinary.uploader.upload(file, resource_type="auto")
                 file_info = {
                     'origin_name': file.filename,
@@ -56,53 +62,37 @@ def board_write():
                     'file_size': f_size
                 }
             except Exception as e:
-                print(f"Cloudinary Error: {e}")
-                return "<script>alert('파일 업로드 중 오류가 발생했습니다.');history.back();</script>"
+                return "<script>alert('파일 업로드 오류');history.back();</script>"
 
-        # 2. 보안 세정 (Bleach)
+        # [보안 세정 - Bleach]
         allowed_tags = ['p', 'br', 'b', 'i', 'u', 'em', 'strong', 'span', 'img', 'a', 'ul', 'ol', 'li', 'h1', 'h2',
-                        'h3', 'table', 'thead', 'tbody', 'tr', 'th', 'td']
-        allowed_attrs = {'a': ['href', 'title', 'target'], 'img': ['src', 'alt', 'style'], '*': ['style', 'class']}
-        try:
-            my_sanitizer = CSSSanitizer(allowed_css_properties=['color', 'background-color', 'font-size', 'text-align'])
-        except:
-            my_sanitizer = None
-        clean_content = bleach.clean(content, tags=allowed_tags, attributes=allowed_attrs, css_sanitizer=my_sanitizer)
+                        'h3']
+        allowed_attrs = {'a': ['href', 'target'], 'img': ['src', 'alt', 'style'], '*': ['style']}
+        clean_content = bleach.clean(content, tags=allowed_tags, attributes=allowed_attrs)
 
-        # 3. DB 저장 (ERD 구조 준수)
+        # 3. DB 저장 (MySQL - category 컬럼 포함)
         conn = Session.get_connection()
         try:
             with conn.cursor() as cursor:
-                # [A] posts 테이블에 저장 (attachments가 posts를 참조하므로)
-                # ERD 기준 컬럼명: member_id, title, content
-                sql_post = "INSERT INTO boards (member_id, title, content) VALUES (%s, %s, %s)"
-                cursor.execute(sql_post, (member_id, title, clean_content))
+                # category 컬럼에 'free', 'info', 'qna' 중 하나가 저장됨
+                sql_post = "INSERT INTO boards (member_id, category, title, content) VALUES (%s, %s, %s, %s)"
+                cursor.execute(sql_post, (member_id, category, title, clean_content))
 
-                # 방금 생성된 posts 테이블의 id 가져오기
                 new_board_id = cursor.lastrowid
 
-                # [B] attachments 테이블에 저장
                 if file_info:
-                    # ERD 컬럼명: post_id, origin_name, save_name, file_path, file_size
-                    sql_file = """
-                        INSERT INTO files (board_id, origin_name, save_name, file_path, file_size) 
-                        VALUES (%s, %s, %s, %s, %s)
-                    """
-                    cursor.execute(sql_file, (
-                        new_board_id,
-                        file_info['origin_name'],
-                        file_info['save_name'],
-                        file_info['file_path'],
-                        file_info['file_size']
-                    ))
+                    sql_file = "INSERT INTO files (board_id, origin_name, save_name, file_path, file_size) VALUES (%s, %s, %s, %s, %s)"
+                    cursor.execute(sql_file, (new_board_id, file_info['origin_name'], file_info['save_name'],
+                                              file_info['file_path'], file_info['file_size']))
 
                 conn.commit()
-            return redirect(url_for('board.board_list'))
+
+            # 저장 후 해당 게시판 목록 페이지로 리다이렉트
+            return redirect(url_for('board.board_list', category=category))
 
         except Exception as e:
             conn.rollback()
-            print(f"DB 저장 에러: {e}")
-            return f"저장 중 에러가 발생했습니다: {e}"
+            return f"저장 에러: {e}"
         finally:
             conn.close()
 
@@ -110,7 +100,10 @@ def board_write():
 @board_bp.route('/list', methods=['GET', 'POST'])
 def board_list():
     # 1. 파라미터 수신
-    viewer_id = session.get('user_id')  # 세션에서 내 ID 가져오기
+    viewer_id = session.get('user_id')
+    user_role = session.get('user_role')
+    category = request.args.get('category', 'free')  # URL에서 카테고리 가져오기
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     show_pinned = request.args.get('show_pinned', 'on')
@@ -119,9 +112,16 @@ def board_list():
     sort = request.args.get('sort', 'latest')
     offset = (page - 1) * per_page
 
-    # 2. WHERE 절 구성
-    where_clauses = ["b.active = 1"] if session.get('user_role') != 'admin' else ["1=1"]
-    query_args = []  # 인자를 담을 리스트 생성
+    # 2. WHERE 절 구성 (관리자 로직 + 카테고리 로직 통합)
+    # [수정] 관리자가 아니면 활성글(active=1)만, 관리자면 전체(1=1)를 봅니다.
+    if user_role == 'admin':
+        where_clauses = ["1=1"]
+    else:
+        where_clauses = ["b.active = 1"]
+
+    # [추가] 게시판 카테고리 필터링 (필수)
+    where_clauses.append("b.category = %s")
+    query_args = [category]
 
     # [추가] 차단한 사용자 필터링: 로그인 상태일 때만 작동
     if viewer_id:
@@ -166,7 +166,7 @@ def board_list():
         FROM boards b
         JOIN members m ON b.member_id = m.id
         {where_sentence}
-        {order_sentence}
+        ORDER BY b.is_pinned DESC, b.created_at DESC
         LIMIT %s OFFSET %s
     """
     rows = fetch_query(sql, tuple(query_args + [per_page, offset]))
@@ -182,7 +182,9 @@ def board_list():
         boards.append(board)
 
     pagination = {'page': page, 'total_pages': total_pages, 'has_prev': page > 1, 'has_next': page < total_pages, 'prev_num': page - 1, 'next_num': page + 1}
-    return render_template('board/list.html', boards=boards, pagination=pagination, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned)
+    return render_template('board/list.html', boards=boards, pagination=pagination,
+                           category=category, search=search, search_type=search_type,
+                           sort=sort, per_page=per_page, show_pinned=show_pinned)
 
 # 게시물 상세보기
 @board_bp.route('/view/<int:board_id>')

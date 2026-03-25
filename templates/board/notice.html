@@ -105,24 +105,8 @@
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-end mb-4 px-2">
         <div>
-            <h2 class="fw-bold mb-1">
-                {% if category == 'info' %}
-                    정보 게시판
-                {% elif category == 'qna' %}
-                    도(道)를 아십니까?
-                {% else %}
-                    자유 게시판
-                {% endif %}
-            </h2>
-            <p class="text-muted mb-0">
-                {% if category == 'info' %}
-                    유용한 정보를 공유하는 공간입니다.
-                {% elif category == 'qna' %}
-                    궁금한 점을 묻고 답하는 공간입니다.
-                {% else %}
-                    자유롭게 소통하는 공간입니다.
-                {% endif %}
-            </p>
+            <h2 class="fw-bold mb-1">도(道)란도란</h2>
+            <p class="text-muted mb-0">도로 위 안전 정보를 공유하고 베테랑들과 소통하세요.</p>
         </div>
         <a href="{{ url_for('board.board_write') }}" class="btn text-white px-4 py-2 rounded-pill shadow-sm" style="background-color: var(--primary-teal);">
             <i class="bi bi-pencil-square me-1"></i> 새 글 쓰기
