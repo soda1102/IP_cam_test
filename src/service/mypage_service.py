@@ -60,7 +60,6 @@ def mypage():
                            board_count=board_count,
                            reported_count=reported_count)
 
-
 # 회원 정보 수정
 @mypage_bp.route('/edit', methods=['GET', 'POST'])
 @login_required
@@ -298,42 +297,3 @@ def unblock_user(blocked_id):
 
     # 2. 올바른 리다이렉트 방법 (블루프린트명.함수명)
     return redirect(url_for('mypage.my_activity') + '#blocks')
-
-# 알림 내역
-@mypage_bp.route('/notifications/')
-@login_required
-def notification_list():
-    user_id = session.get('user_id')
-
-    # 알림 목록 조회 (보낸 사람 이름 포함)
-    notifications = fetch_query("""
-        SELECT n.*, m.name as sender_name 
-        FROM notifications n
-        LEFT JOIN members m ON n.sender_id = m.id
-        WHERE n.user_id = %s
-        ORDER BY n.created_at DESC
-    """, (user_id,))
-
-    return render_template('mypage/notifications.html', notifications=notifications)
-
-@mypage_bp.route('/notifications/read/<int:notif_id>')
-@login_required
-def notification_read(notif_id):
-    user_id = session.get('user_id')
-
-    # 1. 해당 알림 정보 가져오기
-    notif = fetch_query("SELECT * FROM notifications WHERE id = %s AND user_id = %s", (notif_id, user_id), one=True)
-
-    if notif:
-        # 2. 읽음 처리
-        execute_query("UPDATE notifications SET is_read = TRUE WHERE id = %s", (notif_id,))
-
-        # 3. 타입별 이동 경로 설정
-        if notif['type'] in ['comment', 'like', 'scrap', 'new_post']:
-            return redirect(url_for('board.board_view', board_id=notif['target_id']))
-        elif notif['type'] == 'follow':
-            return redirect(url_for('mypage.user_profile', user_id=notif['target_id']))
-        elif notif['type'] == 'notice':
-            return redirect(url_for('board.notice_list'))
-
-    return redirect(url_for('mypage.notification_list'))
