@@ -143,6 +143,8 @@
             startBtn.classList.replace('btn-outline-secondary', 'btn-teal');
             startBtn.disabled = false;
             statusText.innerText = "준비 완료: " + file.name;
+            progressBar.style.width = "0%"; // 게이지 초기화
+            progressBar.classList.add('progress-bar-animated');
             document.getElementById('placeholderUI').style.display = 'none';
 
             if (isVideo) {
@@ -196,42 +198,60 @@
         }, 500);
     }
 
-    document.getElementById('uploadForm').onsubmit = function(e) {
+    // [수정] 폼 제출 시 비동기 처리 강화
+    document.getElementById('uploadForm').onsubmit = async function(e) {
         e.preventDefault();
         const file = fileInput.files[0];
         if (!file) return;
-        if (file.type.startsWith('video/')) toggleVideo();
-        else analyzeFrame(videoStream);
+
         statusText.innerText = "분석 진행 중...";
         progressBar.style.width = "100%";
+        progressBar.classList.add('progress-bar-animated');
+
+        if (file.type.startsWith('video/')) {
+            toggleVideo();
+        } else {
+            // 이미지일 경우 분석 완료를 기다림
+            await analyzeFrame(videoStream);
+            statusText.innerText = "분석 완료!";
+            progressBar.classList.remove('progress-bar-animated'); // 애니메이션 중지
+        }
     };
 
     videoPlayer.onended = () => {
         stopAnalysis();
         playBtn.style.display = 'block';
-        statusText.innerText = "분석 완료 (누적 통계 확인 가능)";
+        statusText.innerText = "분석 완료!";
+        progressBar.classList.remove('progress-bar-animated');
     };
 
-    async function analyzeFrame(mediaElement) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoWidth : mediaElement.naturalWidth;
-        tempCanvas.height = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoHeight : mediaElement.naturalHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(mediaElement, 0, 0, tempCanvas.width, tempCanvas.height);
+    // [수정] Promise를 반환하도록 하여 완료 시점을 알 수 있게 함
+    function analyzeFrame(mediaElement) {
+        return new Promise((resolve) => {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoWidth : mediaElement.naturalWidth;
+            tempCanvas.height = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoHeight : mediaElement.naturalHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(mediaElement, 0, 0, tempCanvas.width, tempCanvas.height);
 
-        tempCanvas.toBlob(async (blob) => {
-            const formData = new FormData();
-            formData.append('file', blob, 'frame.jpg');
-            try {
-                const response = await fetch('/model/detect', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (result.success) {
-                    lastResult = result.detections;
-                    accumulateData(result);
-                    drawBoundingBoxes(result.detections);
+            tempCanvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('file', blob, 'frame.jpg');
+                try {
+                    const response = await fetch('/model/detect', { method: 'POST', body: formData });
+                    const result = await response.json();
+                    if (result.success) {
+                        lastResult = result.detections;
+                        accumulateData(result);
+                        drawBoundingBoxes(result.detections);
+                    }
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    resolve(); // 분석 프로세스 종료 알림
                 }
-            } catch (err) { console.error(err); }
-        }, 'image/jpeg', 0.7);
+            }, 'image/jpeg', 0.7);
+        });
     }
 
     function accumulateData(result) {
@@ -248,7 +268,6 @@
             validDetections.forEach(d => {
                 const item = document.createElement('div');
                 item.className = "d-flex justify-content-between border-bottom py-1 small";
-                // [수정] 리스트 텍스트 색상 파란색(text-primary)으로 변경
                 item.innerHTML = `
                     <span class="text-primary fw-bold">${d.label}</span>
                     <span class="text-muted">${d.conf} (탐지됨)</span>
@@ -292,24 +311,20 @@
             const width = (x2 - x1) * displayWidth;
             const height = (y2 - y1) * displayHeight;
 
-            // [핵심 수정] 바운딩 박스 테두리 색상 파란색(`#007BFF`)으로 변경
             drawCtx.strokeStyle = "#007BFF";
             drawCtx.lineWidth = 3;
             drawCtx.strokeRect(startX, startY, width, height);
 
-            // [핵심 수정] 라벨 글씨 배경 파란색(`#007BFF`)으로 변경
             drawCtx.fillStyle = "#007BFF";
             drawCtx.font = "bold 14px Pretendard";
             const label = `${det.label} ${det.conf}`;
             const textWidth = drawCtx.measureText(label).width;
 
-            // 글씨 배경 박스 그리기
             const labelBgWidth = textWidth + 10;
             const labelBgHeight = 20;
-            const labelY = startY - labelBgHeight < 0 ? startY : startY - labelBgHeight; // 화면 상단 벗어남 방지
+            const labelY = startY - labelBgHeight < 0 ? startY : startY - labelBgHeight;
             drawCtx.fillRect(startX, labelY, labelBgWidth, labelBgHeight);
 
-            // [핵심 수정] 파란 배경 박스 위에는 흰색 글씨로 가독성 확보
             drawCtx.fillStyle = "white";
             drawCtx.fillText(label, startX + 5, labelY + 15);
         });
