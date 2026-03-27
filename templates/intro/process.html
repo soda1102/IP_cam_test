@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}개발 과정 - {% endblock %}
+
+{% block style %}
+<style>
+    /* 배경 페이지 전용 스타일 (유지 및 활용) */
+    .bg-section { padding: 80px 0; }
+    
+    /* 강조 텍스트 스타일 (유지) */
+    .point-text {
+        background-color: #20828a; /* 메인 테마 색상 */
+        color: #ffffff;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 5px;
+        display: inline-block;
+        line-height: 1.2;
+    }
+
+    /* 강조 카드 스타일 (유지) */
+    .accent-card {
+        border-left: 5px solid #20828a;
+        background-color: #f8f9fa;
+        padding: 30px;
+        border-radius: 0 15px 15px 0;
+    }
+
+    /* 이미지 박스 규격 고정 (유지 - 캡쳐 화면들이 깔끔하게 보임) */
+    .img-box-fixed {
+        width: 100%;
+        height: 350px; 
+        overflow: hidden;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e9ecef;
+        border: 1px solid #eee; /* 캡쳐화면 경계선 추가 */
+    }
+
+    /* 박스 안의 이미지가 비율을 유지하며 꽉 차게 설정 (유지) */
+    .img-box-fixed img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* 캡쳐 화면은 잘리면 안 되므로 contain으로 변경 */
+        background-color: #fff; /* contain 사용 시 여백은 흰색으로 */
+    }
+
+    /* pretandard 폰트 강제 지정 (유지) */
+    h1, h2, h3, p, span {
+        font-family: 'Pretendard', sans-serif !important;
+    }
+
+    /* 모바일 대응 (유지) */
+    @media (max-width: 991.98px) {
+        .bg-section { padding: 40px 15px; }
+        .img-box-fixed { height: 250px; } /* 모바일에서는 높이 줄임 */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container bg-section">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold mb-3">모델 개발 과정</h1>
+        <p class="lead text-muted">데이터부터 구현까지, AI 구축의 여정</p>
+        <hr class="mx-auto" style="width: 60px; height: 4px; background-color: #20828a; opacity: 1;">
+    </div>
+
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="d-flex align-items-center mb-3">
+                <span class="badge bg-secondary me-3 fs-6 p-2">STEP 1</span>
+                <h2 class="h3 mb-0 fw-bold">데이터 수집 및 라벨링</h2>
+            </div>
+            <p class="lh-lg">
+                AI 모델의 성능은 양질의 데이터에 달려 있습니다. 우리는 국내 도로 환경에서 발생할 수 있는 야생동물 데이터를 수집하고, <span class="point-text">Roboflow 도구를 활용</span>하여 정밀한 라벨링 작업을 수행했습니다.
+            </p>
+            <p class="lh-lg text-muted small">
+                * 멧돼지, 고라니, 너구리 등 주요 출몰 동물에 대해 <br>수천 장의 이미지에 바운딩 박스를 설정하여 학습 데이터를 구축했습니다.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="img-box-fixed shadow-sm">
+                <img src="/static/img/label.jpg" alt="로보플로 라벨링 작업 화면">
+            </div>
+        </div>
+    </div>
+
+    <div class="row align-items-center flex-lg-row-reverse mb-5">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="d-flex align-items-center mb-3">
+                <span class="badge bg-secondary me-3 fs-6 p-2">STEP 2</span>
+                <h2 class="h3 mb-0 fw-bold">YOLOv11 모델 학습</h2>
+            </div>
+            <p class="lh-lg">
+                구축된 데이터를 바탕으로 최신 객체 탐지 모델인 <span class="point-text">YOLOv11을 사용하여 학습</span>을 진행했습니다. <br> 실시간 탐지 속도와 정확도의 균형을 맞추기 위해 다양한 하이퍼파라미터를 조정했습니다.
+            </p>
+            <p class="lh-lg text-muted small">
+                * 고성능 GPU 환경에서 학습을 진행했으며, Loss 그래프와 mAP(Mean Average Precision) 지표를 <br>실시간으로 모니터링하여 최적의 가중치(Weight) 파일을 추출했습니다.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="img-box-fixed shadow-sm">
+                <img src="/static/img/develop_training.png" alt="YOLOv11 모델 학습 화면">
+            </div>
+        </div>
+    </div>
+
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="d-flex align-items-center mb-3">
+                <span class="badge bg-secondary me-3 fs-6 p-2">STEP 3</span>
+                <h2 class="h3 mb-0 fw-bold">Flask 기반 웹 서비스 구현</h2>
+            </div>
+            <p class="lh-lg">
+                학습된 모델을 사용자가 쉽게 사용할 수 있도록 Flask 웹 프레임워크를 활용하여 웹 서비스를 구축했습니다. 사용자가 영상이나 이미지를 업로드하면 <span class="point-text">백엔드에서 실시간으로 분석</span>하여 결과를 되돌려줍니다.
+            </p>
+            <p class="lh-lg text-muted small">
+                * OpenCV를 활용하여 영상 프레임을 처리하고, <br>분석된 결과(바운딩 박스)를 웹 화면에 동적으로 렌더링하는 로직을 구현했습니다.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="img-box-fixed shadow-sm">
+                <img src="/static/img/flask.png" alt="웹 서비스 구현 화면">
+            </div>
+        </div>
+    </div>
+
+    <div class="accent-card mt-5 shadow-sm">
+        <p class="fs-5 mb-0" style="font-style: italic;">
+            "이러한 체계적인 개발 과정을 거쳐 <strong>'도(道)와주세요'</strong>의 고성능 AI 엔진이 완성되었습니다."
+        </p>
+    </div>
+</div>
+{% endblock %}
