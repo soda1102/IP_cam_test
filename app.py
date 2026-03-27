@@ -2,7 +2,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 기본 모듈
-import os
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # 라이브러리
 from flask_caching import Cache
