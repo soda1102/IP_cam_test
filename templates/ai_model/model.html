@@ -7,30 +7,35 @@
     /* 페이지 공통 섹션 스타일 */
     .bg-section { padding: 80px 0; }
 
-    /* 기존 포인트 텍스트 스타일 유지 */
-    .point-text {
-        background-color: #20828a;
-        color: #ffffff;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 5px;
-        display: inline-block;
-        line-height: 1.2;
-    }
-
-    /* 영상 미리보기 박스 (프로젝트 배경 페이지의 img-box-fixed 스타일 활용) */
+    /* 영상 미리보기 박스 - 컨테이너 역할 (이미지+캔버스 겹침용) */
     .video-box-main {
         width: 100%;
         min-height: 450px;
         background-color: #f8f9fa;
         border-radius: 15px;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
         position: relative;
         overflow: hidden;
         border: 1px solid #eee;
+    }
+
+    /* 이미지와 캔버스가 동일한 위치에 겹치도록 설정 */
+    #videoStream {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: none;
+    }
+
+    #overlayCanvas {
+        position: absolute;
+        /* 이미지와 똑같이 가운데에 오도록 설정 */
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
     }
 
     /* 차트 및 리스트 카드 스타일 */
@@ -60,7 +65,6 @@
         color: white;
     }
 
-    /* 폰트 일관성 유지 */
     h1, h2, h3, p, span {
         font-family: 'Pretendard', sans-serif !important;
     }
@@ -77,8 +81,9 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="video-box-main shadow-sm">
-                <img id="videoStream" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+            <div class="video-box-main shadow-sm" id="streamContainer">
+                <img id="videoStream" src="">
+                <canvas id="overlayCanvas"></canvas>
 
                 <div id="placeholderUI" class="text-center">
                     <i class="bi bi-camera-video text-muted" style="font-size: 3rem;"></i>
@@ -124,7 +129,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // 1. 차트 초기화 (기존 동일)
+    // 1. 차트 초기화
     const ctx = document.getElementById('statChart').getContext('2d');
     const statChart = new Chart(ctx, {
         type: 'bar',
@@ -137,7 +142,12 @@
                 borderRadius: 5
             }]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
     });
 
     const fileInput = document.getElementById('videoFile');
@@ -145,41 +155,40 @@
     const statusText = document.getElementById('statusText');
     const progressBar = document.getElementById('analysisProgress');
     const videoStream = document.getElementById('videoStream');
+    const overlayCanvas = document.getElementById('overlayCanvas');
     const placeholderUI = document.getElementById('placeholderUI');
+    const drawCtx = overlayCanvas.getContext('2d');
 
-    // 2. 파일 선택 시 로직 (기존 동일)
+    // 2. 파일 선택 시 미리보기 처리
     fileInput.onchange = function() {
         if(this.files.length > 0) {
             startBtn.classList.replace('btn-outline-secondary', 'btn-teal');
             startBtn.disabled = false;
             statusText.innerText = "분석 준비 완료: " + this.files[0].name;
 
-            // 선택한 이미지 미리보기 (분석 전)
             videoStream.src = URL.createObjectURL(this.files[0]);
             videoStream.style.display = 'block';
             placeholderUI.style.display = 'none';
+
+            // 새 파일 선택 시 이전 캔버스 기록 삭제
+            drawCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
     };
 
-    // 3. [핵심] 실제 서버 분석 연결 로직
+    // 3. 서버 분석 연결 및 바운딩 박스 그리기
     document.getElementById('uploadForm').onsubmit = async function(e) {
         e.preventDefault();
-
         const file = fileInput.files[0];
         if (!file) return;
 
-        // 서버로 보낼 데이터 주머니 만들기
         const formData = new FormData();
         formData.append('file', file);
 
-        // UI 상태 변경
-        statusText.innerText = "YOLOv11 모델 분석 중...";
-        progressBar.style.width = "40%"; // 진행바 살짝 올리기
+        statusText.innerText = "AI 모델 분석 중...";
+        progressBar.style.width = "40%";
         startBtn.disabled = true;
 
         try {
-            // [연결 포인트] 서버에 분석 요청 보내기
-            // Blueprint 경로가 /model이면 아래 주소로 보냅니다.
             const response = await fetch('/model/detect', {
                 method: 'POST',
                 body: formData
@@ -188,28 +197,30 @@
             const result = await response.json();
 
             if (result.success) {
-                // 4. 서버가 준 진짜 데이터로 UI 업데이트
                 progressBar.style.width = "100%";
                 statusText.innerText = "분석 완료!";
 
-                // 차트 업데이트 (서버에서 준 counts 리스트 대입)
+                // 차트 업데이트
                 statChart.data.datasets[0].data = result.counts;
                 statChart.update();
 
-                // 리스트 업데이트 (서버에서 준 객체들 리스트 만들기)
+                // 리스트 업데이트
                 const listHTML = result.detections.map(d => `
                     <div class="d-flex justify-content-between border-bottom py-1 small">
-                        <span class="${d.label === '고라니' || d.label === '멧돼지' ? 'text-danger fw-bold' : ''}">${d.label}</span>
+                        <span class="text-danger fw-bold">${d.label}</span>
                         <span class="text-muted">${d.conf}</span>
                     </div>
                 `).join('');
-
                 document.getElementById('detectionList').innerHTML = listHTML || '<p class="text-muted small">탐지된 객체 없음</p>';
+
+                // [추가 기능] 바운딩 박스 그리기 실행
+                if (result.detections.length > 0) {
+                    drawBoundingBoxes(result.detections);
+                }
             } else {
                 alert("분석 실패: " + result.error);
                 statusText.innerText = "분석 오류 발생";
             }
-
         } catch (error) {
             console.error("Error:", error);
             statusText.innerText = "서버 연결 오류";
@@ -217,5 +228,71 @@
             startBtn.disabled = false;
         }
     };
+
+    // [핵심] 바운딩 박스 그리기 함수
+    function drawBoundingBoxes(detections) {
+    const img = videoStream;
+
+    // [중요] 이미지가 화면에서 실제로 차지하는 '진짜' 크기를 구합니다.
+    const imgWidth = img.clientWidth;
+    const imgHeight = img.clientHeight;
+    const nativeWidth = img.naturalWidth;
+    const nativeHeight = img.naturalHeight;
+
+    const imgRatio = nativeWidth / nativeHeight;
+    const containerRatio = imgWidth / imgHeight;
+
+    let displayWidth, displayHeight;
+
+    // object-fit: contain 로직을 자바스크립트로 계산
+    if (imgRatio > containerRatio) {
+        displayWidth = imgWidth;
+        displayHeight = imgWidth / imgRatio;
+    } else {
+        displayHeight = imgHeight;
+        displayWidth = imgHeight * imgRatio;
+    }
+
+    // 캔버스 크기를 '박스가 쳐진 실제 이미지 영역'에 딱 맞춥니다.
+    overlayCanvas.width = displayWidth;
+    overlayCanvas.height = displayHeight;
+
+    drawCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    detections.forEach(det => {
+        if (!det.bbox) return;
+
+        // 상대 좌표(0~1)를 실제 그려진 이미지 크기에 곱함
+        const [x1, y1, x2, y2] = det.bbox;
+        const startX = x1 * displayWidth;
+        const startY = y1 * displayHeight;
+        const width = (x2 - x1) * displayWidth;
+        const height = (y2 - y1) * displayHeight;
+
+        // 박스 그리기
+        drawCtx.strokeStyle = "#FF3B30";
+        drawCtx.lineWidth = 3;
+        drawCtx.strokeRect(startX, startY, width, height);
+
+        // 라벨 그리기
+        const label = `${det.label} ${det.conf}`;
+        drawCtx.font = "bold 14px Pretendard";
+        const textWidth = drawCtx.measureText(label).width;
+
+        drawCtx.fillStyle = "#FF3B30";
+        drawCtx.fillRect(startX, startY - 20 < 0 ? startY : startY - 20, textWidth + 10, 20);
+
+        drawCtx.fillStyle = "white";
+        drawCtx.fillText(label, startX + 5, startY - 20 < 0 ? startY + 15 : startY - 5);
+    });
+}
+
+    // 창 크기가 조절될 때 박스 위치도 재조정
+    window.addEventListener('resize', () => {
+        if (videoStream.style.display === 'block') {
+            // 현재 리스트에 있는 데이터를 기준으로 다시 그림 (재분석 방지)
+            // 실제 구현 시에는 result 데이터를 변수에 저장해두고 재사용하는 것이 좋습니다.
+        }
+    });
 </script>
 {% endblock %}
