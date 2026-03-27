@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}AI 분석 결과 - {% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    .activity-body {
+        background-color: #F8F9FA;
+        padding: 50px 0 0 0;
+        min-height: 80vh;
+    }
+
+    .activity-header-box {
+        max-width: 900px;
+        margin: 0 auto 20px auto;
+        background-color: #008080;
+        color: #FFFFFF;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 55px;
+        padding: 0;
+    }
+
+    .activity-header-box h2 {
+        font-size: 20px;
+        margin: 0 !important;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .activity-card-container {
+        max-width: 900px;
+        margin: 0 auto;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        background-color: #FFFFFF;
+        overflow: hidden;
+    }
+
+    /* ✅ 모두 #activityTab 또는 #activityTabContent 로 범위 제한 */
+    #activityTab.nav-tabs {
+        border-bottom: 2px solid #f0f0f0;
+        justify-content: center;
+    }
+
+    #activityTab .nav-link {
+        color: #333;
+        font-weight: 600;
+        border: none !important;
+        padding: 15px 25px;
+    }
+
+    #activityTab .nav-link.active {
+        color: #008080 !important;
+        background-color: transparent !important;
+        border-bottom: 3px solid #008080 !important;
+    }
+
+    #activityTabContent.tab-content {
+        padding: 30px;
+        min-height: 300px;
+    }
+
+    .activity-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #f1f1f1;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.2s;
+    }
+
+    .activity-item:hover {
+        background-color: #f9f9f9;
+        color: #008080;
+    }
+
+    .text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    max-width: 100%;
+    }
+
+    .home-back { text-align: center; margin-top: auto; margin-bottom: auto; padding: 30px 0; }
+    .home-back a { color: #888; text-decoration: none; font-size: 14px; }
+    .home-back a:hover { color: #008080; }
+
+    .item-title { font-weight: 600; margin-bottom: 3px; }
+    .item-date { font-size: 12px; color: #999; }
+    .empty-msg { text-align: center; padding: 50px 0; color: #ccc; }
+
+    /* 페이지네이션 */
+    .page-link { color: #495057 !important; background-color: #fff !important; border: 1px solid #dee2e6 !important; }
+    .page-item.active .page-link { background-color: var(--primary-teal) !important; border-color: var(--primary-teal) !important; color: white !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-body">
+    <div class="container">
+        <div class="activity-header-box">
+            <h2>AI 분석 결과</h2>
+        </div>
+
+        <div class="activity-card-container">
+            <ul class="nav nav-tabs" id="activityTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button">작성한 게시물</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments" type="button">작성한 댓글</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="likes-tab" data-bs-toggle="tab" data-bs-target="#likes" type="button">좋아요</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="scraps-tab" data-bs-toggle="tab" data-bs-target="#scraps" type="button">스크랩</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="trash-tab" data-bs-toggle="tab" data-bs-target="#trash" type="button">휴지통</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="blocks-tab" data-bs-toggle="tab" data-bs-target="#blocks" type="button">차단 목록</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="activityTabContent">
+                <div class="tab-pane fade show active" id="posts">
+                    {% if my_posts %}
+                        {% for post in my_posts %}
+                        <a href="/board/view/{{ post.id }}" class="activity-item">
+                            <div>
+                                <div class="item-title">{{ post.title }}</div>
+                                <div class="item-date">{{ post.created_at.strftime('%Y-%m-%d') }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br>작성한 게시물이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="comments">
+                    {% if my_comments %}
+                        {% for comment in my_comments %}
+                        <a href="/board/view/{{ comment.board_id }}" class="activity-item">
+                            <div style="width: 90%;">
+                                <div class="item-title text-truncate">{{ comment.content }}</div>
+                                <div class="item-date">
+                                    <span class="text-muted">원문: {{ comment.board_title }}</span> |
+                                    {{ comment.created_at.strftime('%Y-%m-%d') }}
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br>작성한 댓글이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="likes">
+                    {% if my_likes %}
+                        {% for post in my_likes %}
+                        <a href="/board/view/{{ post.id }}" class="activity-item">
+                            <div>
+                                <div class="item-title">{{ post.title }} <small class="text-danger"></small></div>
+                                <div class="item-date">{{ post.created_at.strftime('%Y-%m-%d') if post.created_at }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br>좋아요 표시한 게시물이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="scraps">
+                    {% if my_scraps %}
+                        {% for post in my_scraps %}
+                        <a href="/board/view/{{ post.id }}" class="activity-item">
+                            <div>
+                                <div class="item-title">{{ post.title }} <small class="text-primary"></small></div>
+                                <div class="item-date">{{ post.created_at.strftime('%Y-%m-%d') if post.created_at }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br>스크랩한 게시물이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="trash">
+                    {% if my_trash %}
+                        {% for post in my_trash %}
+                        <div class="activity-item" style="cursor: default;">
+                            <div style="flex: 1;">
+                                <div class="item-title">{{ post.title }}</div>
+                                <div class="item-date">
+                                    삭제일: {{ post.deleted_at.strftime('%Y-%m-%d') if post.deleted_at }} |
+                                    <span class="text-danger fw-bold">{{ post.remaining_days }}일 남음</span>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button onclick="location.href='{{ url_for('board.board_restore', board_id=post.id) }}'"
+                                        class="btn btn-sm btn-outline-success border-0 me-2">
+                                    <i class="bi bi-arrow-counterclockwise"></i> 복구
+                                </button>
+                                <button onclick="if(confirm('정말 영구 삭제하시겠습니까?')){ location.href='{{ url_for('board.board_permanent_delete', board_id=post.id) }}' }"
+                                        class="btn btn-sm btn-outline-danger border-0">
+                                    <i class="bi bi-trash3"></i> 삭제
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br>휴지통이 비어 있습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="blocks">
+                    {% if my_blocks %}
+                        {% for block in my_blocks %}
+                        <div class="activity-item">
+                            <div>
+                                <div class="item-title text-danger">
+                                    <i class="bi bi-person-x-fill"></i> {{ block.blocked_name }}
+                                </div>
+                                <div class="item-date">차단 일시: {{ block.created_at.strftime('%Y-%m-%d') }}</div>
+                            </div>
+                            <button onclick="if(confirm('차단을 해제하시겠습니까?')){ location.href='/mypage/my_activity/unblock/{{ block.blocked_id }}' }"
+                                    class="btn btn-sm btn-outline-secondary border-0">
+                                차단 해제
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br>차단한 사용자가 없습니다.</div>
+                    {% endif %}
+                </div>
+                <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    // 1. URL에 해시(#blocks 등)가 있으면 해당 탭을 활성화
+                    const hash = window.location.hash;
+                    if (hash) {
+                        const targetTab = document.querySelector(`button[data-bs-target="${hash}"]`);
+                        if (targetTab) {
+                            const tab = new bootstrap.Tab(targetTab);
+                            tab.show();
+                        }
+                    }
+
+                    // 2. 탭을 클릭할 때마다 주소창의 해시를 변경 (새로고침 시 유지용)
+                    const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+                    tabButtons.forEach(button => {
+                        button.addEventListener('shown.bs.tab', function (event) {
+                            const targetId = event.target.getAttribute('data-bs-target');
+                            history.replaceState(null, null, targetId);
+                        });
+                    });
+                });
+                </script>
+            </div>
+
+            <nav class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('mypage.my_activity', page=pagination.prev_num) }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+
+                    {% for p in range(1, pagination.total_pages + 1) %}
+                    <li class="page-item {{ 'active' if p == pagination.page }}">
+                        <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('mypage.my_activity', page=p) }}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('mypage.my_activity', page=pagination.next_num) }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+
+        <div class="home-back">
+            <a href="/"><br>홈으로 돌아가기</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
