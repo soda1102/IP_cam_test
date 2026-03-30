@@ -4,9 +4,6 @@ from flask import Blueprint, render_template, request, jsonify, Response
 from src.common import login_required
 from ultralytics import YOLO
 
-from flask import g
-from src.domain.models import AIAnalysis, db
-
 model_bp = Blueprint('model', __name__)
 
 # 1. YOLOv11 모델 로드
