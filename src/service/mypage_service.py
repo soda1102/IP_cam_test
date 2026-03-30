@@ -15,6 +15,9 @@ from src.common import fetch_query, execute_query, log_system, login_required
 from src.common.storage import upload_file
 from src.domain import Member
 import math
+from flask import Blueprint, request, session, render_template, redirect, url_for
+# 모델 임포트 경로가 정확해야 합니다.
+from src.common import fetch_query, login_required
 
 mypage_bp = Blueprint('mypage', __name__)
 
@@ -297,3 +300,82 @@ def unblock_user(blocked_id):
 
     # 2. 올바른 리다이렉트 방법 (블루프린트명.함수명)
     return redirect(url_for('mypage.my_activity') + '#blocks')
+
+# AI 분석 결과
+@mypage_bp.route('/ai_results')
+@login_required
+def ai_results():
+    print("아무거나")
+
+    # 2. 페이지네이션 설정
+    page = request.args.get('page', type=int, default=1)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    user_id = session.get('user_id')
+
+    print("page : ", page)
+
+    try:
+        # 3. 전체 데이터 개수 조회 (SQL 직접 사용)
+        count_sql = "SELECT COUNT(*) as cnt FROM ai_analysis WHERE user_id = %s"
+        total_row = fetch_query(count_sql, (user_id,), one=True)
+        total_count = total_row['cnt'] if total_row else 0
+        total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
+
+        print("total_row : ", total_row)
+
+        # 4. 분석 결과 목록 조회
+        list_sql = """
+            SELECT id, filename, boar_count, water_deer_count, racoon_count, created_at 
+            FROM ai_analysis 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC 
+            LIMIT %s OFFSET %s
+        """
+        items = fetch_query(list_sql, (user_id, per_page, offset))
+
+        print("items : ", items)
+
+        # 5. html의 pagination 객체 구조에 맞춰 데이터 구성
+        pagination_obj = {
+            'items': items if items else [],
+            'page': page,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_num': page - 1,
+            'next_num': page + 1,
+            # HTML의 {% for p in pagination.page_range %}와 이름을 맞춤
+            'page_range': list(range(1, total_pages + 1))
+        }
+        print('pagination_obj : ', pagination_obj)
+
+        return render_template('mypage/ai_model.html', pagination=pagination_obj)
+
+    except Exception as e:
+        print(f"ai_results 조회 에러: {e}")
+        return f"<script>alert('데이터 조회 중 오류가 발생했습니다.'); history.back();</script>", 500
+
+# AI 분석 결과 다운로드
+@mypage_bp.route('/download-report/<int:analysis_id>') # 주소 수정
+@login_required
+def download_ai_report(analysis_id):
+
+    analysis = AIAnalysis.query.get_or_404(analysis_id)
+
+    # 메모장에 기록할 내용 작성
+    report_content = f"""[AI 동물 분석 리포트]
+분석 파일명: {analysis.filename}
+분석 일시: {analysis.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+---------------------------------
+- 멧돼지 탐지: {analysis.boar_count}건
+- 고라니 탐지: {analysis.water_deer_count}건
+- 너구리 탐지: {analysis.racoon_count}건
+---------------------------------
+도(道)와주세요 - 로드킬 예방 시스템"""
+
+    response = make_response(report_content)
+    response.headers["Content-Disposition"] = f"attachment; filename=report_{analysis_id}.txt"
+    response.headers["Content-Type"] = "text/plain"
+    return response
