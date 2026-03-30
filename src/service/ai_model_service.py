@@ -1,7 +1,9 @@
 import cv2
 import os
-from flask import Blueprint, render_template, request, jsonify, Response
+import datetime # 추가
+from flask import Blueprint, render_template, request, jsonify, Response, current_app # current_app 추가
 from src.common import login_required
+from src.common.storage import upload_file # 추가
 from ultralytics import YOLO
 
 model_bp = Blueprint('model', __name__)
@@ -56,7 +58,7 @@ def video_feed(filename):
     return Response(generate_frames(temp_path),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# 결과 저장
+# 결과 저장 (기존 분석 로직)
 @model_bp.route('/detect', methods=['POST'])
 @login_required
 def detect_objects():
@@ -108,3 +110,46 @@ def detect_objects():
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+# --- 여기서부터 추가된 저장 로직입니다 (형식 유지) ---
+
+@model_bp.route('/save_result', methods=['POST'])
+@login_required
+def save_result():
+    """
+    분석된 결과 이미지를 로컬 static/results 폴더와 Cloudinary에 동시 저장
+    """
+    file = request.files.get('merged_image')
+
+    if not file:
+        return jsonify({"success": False, "message": "데이터가 없습니다."}), 400
+
+    try:
+        # 1. 로컬 저장 경로 설정 및 폴더 생성
+        save_dir = os.path.join(current_app.root_path, 'static', 'results')
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 파일명 생성 (시간 기반)
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"detection_{now_str}.jpg"
+        local_path = os.path.join(save_dir, filename)
+
+        # 로컬에 파일 실제 저장
+        file.save(local_path)
+
+        # 2. Cloudinary 업로드
+        with open(local_path, 'rb') as f:
+            result_url = upload_file(f, folder="results")
+
+        if result_url:
+            return jsonify({
+                "success": True,
+                "url": result_url,
+                "message": "로컬 및 클라우드 저장 성공!"
+            })
+        else:
+            return jsonify({"success": False, "message": "클라우드 업로드 실패"}), 500
+
+    except Exception as e:
+        print(f"Error during save_result: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
