@@ -305,7 +305,6 @@ def unblock_user(blocked_id):
 @mypage_bp.route('/ai_results')
 @login_required
 def ai_results():
-    print("아무거나")
 
     # 2. 페이지네이션 설정
     page = request.args.get('page', type=int, default=1)
@@ -314,9 +313,6 @@ def ai_results():
 
     user_id = session.get('user_id')
 
-    print("page : ", page)
-    print('user_id : ', user_id)
-
     try:
         # 3. 전체 데이터 개수 조회 (SQL 직접 사용)
         count_sql = "SELECT COUNT(*) as cnt FROM ai_analysis WHERE user_id = %s"
@@ -324,7 +320,6 @@ def ai_results():
         total_count = total_row['cnt'] if total_row else 0
         total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
 
-        print("total_row : ", total_row)
 
         # 4. 분석 결과 목록 조회
         list_sql = """
@@ -335,8 +330,6 @@ def ai_results():
             LIMIT %s OFFSET %s
         """
         items = fetch_query(list_sql, (user_id, per_page, offset))
-
-        print("items : ", items)
 
         # 5. html의 pagination 객체 구조에 맞춰 데이터 구성
         pagination_obj = {
@@ -349,7 +342,6 @@ def ai_results():
             'next_num': page + 1,
             'page_range': list(range(1, total_pages + 1))
         }
-        print('pagination_obj : ', pagination_obj)
 
         return render_template('mypage/ai_model.html', pagination=pagination_obj)
 

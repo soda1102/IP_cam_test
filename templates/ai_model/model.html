@@ -62,7 +62,7 @@
                 <video id="videoPlayer" muted playsinline></video>
 
                 <div id="playBtn" class="play-overlay">
-                    <i id="playIcon" class="bi bi-play-circle-fill"></i>
+                    <i class="bi bi-play-circle-fill"></i>
                 </div>
 
                 <canvas id="overlayCanvas"></canvas>
@@ -81,7 +81,7 @@
         <div class="col-lg-4">
             <div class="info-card shadow-sm mb-4">
                 <form id="uploadForm">
-                    <input type="file" id="videoFile" class="d-none" accept="video/*, image/*" onclick="this.value=null;">
+                    <input type="file" id="videoFile" class="d-none" accept="video/*, image/*">
                     <button type="button" class="btn btn-teal w-100 py-3 mb-3" onclick="document.getElementById('videoFile').click()">
                         <i class="bi bi-folder2-open me-2"></i> 파일 첨부
                     </button>
@@ -108,33 +108,20 @@
 <script>
     let totalCounts = [0, 0, 0];
     const labels = ['멧돼지', '고라니', '너구리'];
-    let statChart = null;
 
-    function initChart() {
-        const ctx = document.getElementById('statChart').getContext('2d');
-        if (statChart !== null) {
-            statChart.destroy();
-        }
-        statChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{ label: '누적 탐지 수', data: totalCounts, backgroundColor: '#20828A', borderRadius: 5 }]
-            },
-            options: {
-                responsive: true,
-                animation: { duration: 500 },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }
-        });
-    }
-
-    initChart();
+    const ctx = document.getElementById('statChart').getContext('2d');
+    const statChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: '누적 탐지 수', data: totalCounts, backgroundColor: '#20828A', borderRadius: 5 }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
 
     const fileInput = document.getElementById('videoFile');
     const startBtn = document.getElementById('startBtn');
     const playBtn = document.getElementById('playBtn');
-    const playIcon = document.getElementById('playIcon'); // [추가] 아이콘 객체
     const statusText = document.getElementById('statusText');
     const progressBar = document.getElementById('analysisProgress');
     const videoStream = document.getElementById('videoStream');
@@ -144,23 +131,19 @@
 
     let analysisLoop = null;
     let lastResult = null;
-    let isAnalysisActive = false;
-    let currentFile = null; // [추가] 현재 선택된 파일을 저장할 금고
 
     fileInput.onchange = function() {
-        if(this.files && this.files.length > 0) {
-            currentFile = this.files[0]; // [핵심] 금고에 파일 저장
-
+        if(this.files.length > 0) {
             stopAnalysis();
             resetData();
-            const fileURL = URL.createObjectURL(currentFile);
-            const isVideo = currentFile.type.startsWith('video/');
+            const file = this.files[0];
+            const fileURL = URL.createObjectURL(file);
+            const isVideo = file.type.startsWith('video/');
 
             startBtn.classList.replace('btn-outline-secondary', 'btn-teal');
             startBtn.disabled = false;
-
-            statusText.innerText = "준비 완료: " + currentFile.name;
-            progressBar.style.width = "0%";
+            statusText.innerText = "준비 완료: " + file.name;
+            progressBar.style.width = "0%"; // 게이지 초기화
             progressBar.classList.add('progress-bar-animated');
             document.getElementById('placeholderUI').style.display = 'none';
 
@@ -168,9 +151,7 @@
                 videoStream.style.display = 'none';
                 videoPlayer.style.display = 'block';
                 videoPlayer.src = fileURL;
-                videoPlayer.load(); // [핵심] 영상 다시 로드
                 playBtn.style.display = 'block';
-                playIcon.className = 'bi bi-play-circle-fill';
             } else {
                 videoPlayer.style.display = 'none';
                 videoStream.style.display = 'block';
@@ -183,33 +164,20 @@
 
     function resetData() {
         totalCounts = [0, 0, 0];
-        initChart();
+        statChart.data.datasets[0].data = totalCounts;
+        statChart.update();
         document.getElementById('detectionList').innerHTML = '<p class="text-muted small mb-0">분석을 시작하면 목록이 표시됩니다.</p>';
     }
 
-    // [종결] 재생/일시정지 및 아이콘 제어 통합 로직
     function toggleVideo() {
         if (videoPlayer.paused) {
             videoPlayer.play();
-            // 일시정지 아이콘으로 교체 후 0.5초 뒤 숨김
-            playIcon.className = 'bi bi-pause-circle-fill';
-            playBtn.style.display = 'block';
-            setTimeout(() => {
-                if (!videoPlayer.paused) playBtn.style.display = 'none';
-            }, 500);
-
-            if (isAnalysisActive) startAnalysis();
+            playBtn.style.display = 'none';
+            startAnalysis();
         } else {
             videoPlayer.pause();
-            // 재생 아이콘으로 교체 후 계속 표시
-            playIcon.className = 'bi bi-play-circle-fill';
             playBtn.style.display = 'block';
-
-            // 분석 루프만 정지 (상태는 유지)
-            if (analysisLoop) {
-                clearInterval(analysisLoop);
-                analysisLoop = null;
-            }
+            stopAnalysis();
         }
     }
 
@@ -219,83 +187,37 @@
     function stopAnalysis() {
         if (analysisLoop) clearInterval(analysisLoop);
         analysisLoop = null;
-        isAnalysisActive = false;
     }
 
     function startAnalysis() {
         if (analysisLoop) return;
-        isAnalysisActive = true;
         analysisLoop = setInterval(() => {
-            if (!videoPlayer.paused && !videoPlayer.ended && isAnalysisActive) {
+            if (!videoPlayer.paused && !videoPlayer.ended) {
                 analyzeFrame(videoPlayer);
             }
         }, 500);
     }
 
-<<<<<<< HEAD
-=======
-    // 폼 제출 시 비동기 처리 강화
->>>>>>> feature/syk/member
+    // [수정] 폼 제출 시 비동기 처리 강화
     document.getElementById('uploadForm').onsubmit = async function(e) {
         e.preventDefault();
-
-        // [수정] fileInput 대신 currentFile을 사용!
-        const file = currentFile;
+        const file = fileInput.files[0];
         if (!file) return;
 
-        resetData();
-        isAnalysisActive = true;
-
-        progressBar.style.transition = 'none';
-        progressBar.style.width = "0%";
+        statusText.innerText = "분석 진행 중...";
+        progressBar.style.width = "100%";
+        progressBar.classList.add('progress-bar-animated');
 
         if (file.type.startsWith('video/')) {
-            videoPlayer.pause();
-            videoPlayer.currentTime = 0;
-        }
-
-        setTimeout(async () => {
-            progressBar.style.transition = 'width 2.0s ease-out';
-            progressBar.style.width = "85%";
-            progressBar.classList.add('progress-bar-animated');
-
-            statusText.innerText = "분석 진행 중...";
-
-            if (file.type.startsWith('video/')) {
-                playBtn.style.display = 'none'; // 분석 시작 시 아이콘 일단 숨김
-                videoPlayer.play();
-                startAnalysis();
-            } else {
-                await analyzeFrame(videoStream);
-                progressBar.style.transition = 'width 0.3s ease-in-out';
-                progressBar.style.width = "100%";
-                statusText.innerText = "분석 완료!";
-                progressBar.classList.remove('progress-bar-animated');
-            }
-        }, 10);
-    };
-
-    // [수정] 비디오 끝날 때 로직: '분석 모드'일 때만 결과 표시
-    videoPlayer.onended = () => {
-        // 분석 중이었을 때만 실행
-        if (isAnalysisActive) {
-            stopAnalysis(); // 분석 루프 및 플래그 종료
-
-            // 게이지 꽉 채우기 및 문구 변경
-            progressBar.style.transition = 'width 0.3s ease-in-out';
-            progressBar.style.width = "100%";
-            statusText.innerText = "분석 완료!";
-            progressBar.classList.remove('progress-bar-animated');
+            toggleVideo();
         } else {
-            // 그냥 미리보기 재생만 끝난 경우
-            playBtn.style.display = 'block';
-            playIcon.className = 'bi bi-play-circle-fill';
-            // statusText는 건드리지 않거나 "준비 완료" 상태 유지
+            // 이미지일 경우 분석 완료를 기다림
+            await analyzeFrame(videoStream);
+            statusText.innerText = "분석 완료!";
+            progressBar.classList.remove('progress-bar-animated'); // 애니메이션 중지
         }
     };
 
-<<<<<<< HEAD
-=======
     videoPlayer.onended = () => {
         stopAnalysis();
         playBtn.style.display = 'block';
@@ -303,62 +225,40 @@
         progressBar.classList.remove('progress-bar-animated');
     };
 
-    // Promise를 반환하도록 하여 완료 시점을 알 수 있게 함
->>>>>>> feature/syk/member
+    // [수정] Promise를 반환하도록 하여 완료 시점을 알 수 있게 함
     function analyzeFrame(mediaElement) {
         return new Promise((resolve) => {
             const tempCanvas = document.createElement('canvas');
-
-            // 미디어 소스(비디오/이미지)의 실제 해상도 가져오기
-            const isVideo = mediaElement.tagName === 'VIDEO';
-            tempCanvas.width = isVideo ? mediaElement.videoWidth : mediaElement.naturalWidth;
-            tempCanvas.height = isVideo ? mediaElement.videoHeight : mediaElement.naturalHeight;
-
+            tempCanvas.width = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoWidth : mediaElement.naturalWidth;
+            tempCanvas.height = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoHeight : mediaElement.naturalHeight;
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(mediaElement, 0, 0, tempCanvas.width, tempCanvas.height);
 
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
-                // 서버에서 'file' 키로 받으므로 이름을 맞춤
                 formData.append('file', blob, 'frame.jpg');
-
                 try {
-                    // [수정 핵심] Flask url_for를 사용하여 404 오류 방지
-                    // 만약 Blueprint 이름이 'model'이 아니라면 등록된 이름을 확인하세요.
-                    const response = await fetch("{{ url_for('model.detect_objects') }}", {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+                    const response = await fetch('/model/detect', { method: 'POST', body: formData });
                     const result = await response.json();
-
                     if (result.success) {
                         lastResult = result.detections;
                         accumulateData(result);
-                        // 서버에서 받은 좌표(detections)를 바탕으로 화면에 박스 그리기
                         drawBoundingBoxes(result.detections);
                     }
                 } catch (err) {
-                    console.error("분석 중 오류 발생:", err);
+                    console.error(err);
                 } finally {
                     resolve(); // 분석 프로세스 종료 알림
                 }
             }, 'image/jpeg', 0.7);
         });
     }
-    }
 
     function accumulateData(result) {
         result.counts.forEach((count, idx) => {
             totalCounts[idx] += count;
         });
-        // 실시간 반영을 위해 'none' 제거 및 데이터 갱신 명시
-        if (statChart) {
-            statChart.data.datasets[0].data = totalCounts;
-            statChart.update();
-        }
+        statChart.update('none');
 
         const validDetections = result.detections.filter(d => parseFloat(d.conf) > 0.4);
         if (validDetections.length > 0) {
@@ -379,8 +279,6 @@
 
     function drawBoundingBoxes(detections) {
         const media = videoStream.style.display === 'block' ? videoStream : videoPlayer;
-        if (!media.clientWidth) return; // 미디어가 아직 로드되지 않은 경우 방지
-
         const mediaWidth = media.clientWidth;
         const mediaHeight = media.clientHeight;
         const nativeWidth = media.tagName === 'VIDEO' ? media.videoWidth : media.naturalWidth;
