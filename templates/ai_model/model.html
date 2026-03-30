@@ -198,7 +198,7 @@
         }, 500);
     }
 
-    // [수정] 폼 제출 시 비동기 처리 강화
+    // 폼 제출 시 비동기 처리 강화
     document.getElementById('uploadForm').onsubmit = async function(e) {
         e.preventDefault();
         const file = fileInput.files[0];
@@ -225,30 +225,46 @@
         progressBar.classList.remove('progress-bar-animated');
     };
 
-    // [수정] Promise를 반환하도록 하여 완료 시점을 알 수 있게 함
+    // Promise를 반환하도록 하여 완료 시점을 알 수 있게 함
     function analyzeFrame(mediaElement) {
         return new Promise((resolve) => {
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoWidth : mediaElement.naturalWidth;
-            tempCanvas.height = (mediaElement.tagName === 'VIDEO') ? mediaElement.videoHeight : mediaElement.naturalHeight;
+
+            // 미디어 소스(비디오/이미지)의 실제 해상도 가져오기
+            const isVideo = mediaElement.tagName === 'VIDEO';
+            tempCanvas.width = isVideo ? mediaElement.videoWidth : mediaElement.naturalWidth;
+            tempCanvas.height = isVideo ? mediaElement.videoHeight : mediaElement.naturalHeight;
+
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(mediaElement, 0, 0, tempCanvas.width, tempCanvas.height);
 
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
+                // 서버에서 'file' 키로 받으므로 이름을 맞춤
                 formData.append('file', blob, 'frame.jpg');
+
                 try {
-                    const response = await fetch('/model/detect', { method: 'POST', body: formData });
+                    // [수정 핵심] Flask url_for를 사용하여 404 오류 방지
+                    // 만약 Blueprint 이름이 'model'이 아니라면 등록된 이름을 확인하세요.
+                    const response = await fetch("{{ url_for('model.detect_objects') }}", {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
                     const result = await response.json();
+
                     if (result.success) {
                         lastResult = result.detections;
                         accumulateData(result);
+                        // 서버에서 받은 좌표(detections)를 바탕으로 화면에 박스 그리기
                         drawBoundingBoxes(result.detections);
                     }
                 } catch (err) {
-                    console.error(err);
+                    console.error("분석 중 오류 발생:", err);
                 } finally {
-                    resolve(); // 분석 프로세스 종료 알림
+                    resolve(); // 분석 프로세스 종료 알림 (비동기 제어용)
                 }
             }, 'image/jpeg', 0.7);
         });

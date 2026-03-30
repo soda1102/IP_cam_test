@@ -3,6 +3,8 @@ from sqlalchemy import create_engine
 import pymysql
 import ssl
 import os
+from flask_sqlalchemy import SQLAlchemy
+db = SQLAlchemy()
 
 CLOUD_DB_CONFIG = {
     'host': os.getenv('DB_HOST'),
