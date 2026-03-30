@@ -81,7 +81,7 @@
         <div class="col-lg-4">
             <div class="info-card shadow-sm mb-4">
                 <form id="uploadForm">
-                    <input type="file" id="videoFile" class="d-none" accept="video/*, image/*">
+                    <input type="file" id="videoFile" class="d-none" accept="video/*, image/*" onclick="this.value=null;">
                     <button type="button" class="btn btn-teal w-100 py-3 mb-3" onclick="document.getElementById('videoFile').click()">
                         <i class="bi bi-folder2-open me-2"></i> 파일 첨부
                     </button>
@@ -145,18 +145,21 @@
     let analysisLoop = null;
     let lastResult = null;
     let isAnalysisActive = false;
+    let currentFile = null; // [추가] 현재 선택된 파일을 저장할 금고
 
     fileInput.onchange = function() {
-        if(this.files.length > 0) {
+        if(this.files && this.files.length > 0) {
+            currentFile = this.files[0]; // [핵심] 금고에 파일 저장
+
             stopAnalysis();
             resetData();
-            const file = this.files[0];
-            const fileURL = URL.createObjectURL(file);
-            const isVideo = file.type.startsWith('video/');
+            const fileURL = URL.createObjectURL(currentFile);
+            const isVideo = currentFile.type.startsWith('video/');
 
             startBtn.classList.replace('btn-outline-secondary', 'btn-teal');
             startBtn.disabled = false;
-            statusText.innerText = "준비 완료: " + file.name;
+
+            statusText.innerText = "준비 완료: " + currentFile.name;
             progressBar.style.width = "0%";
             progressBar.classList.add('progress-bar-animated');
             document.getElementById('placeholderUI').style.display = 'none';
@@ -165,8 +168,9 @@
                 videoStream.style.display = 'none';
                 videoPlayer.style.display = 'block';
                 videoPlayer.src = fileURL;
+                videoPlayer.load(); // [핵심] 영상 다시 로드
                 playBtn.style.display = 'block';
-                playIcon.className = 'bi bi-play-circle-fill'; // 초기 상태 재생 아이콘
+                playIcon.className = 'bi bi-play-circle-fill';
             } else {
                 videoPlayer.style.display = 'none';
                 videoStream.style.display = 'block';
@@ -230,7 +234,9 @@
 
     document.getElementById('uploadForm').onsubmit = async function(e) {
         e.preventDefault();
-        const file = fileInput.files[0];
+
+        // [수정] fileInput 대신 currentFile을 사용!
+        const file = currentFile;
         if (!file) return;
 
         resetData();
