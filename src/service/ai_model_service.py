@@ -2,9 +2,11 @@ import cv2
 import os
 import datetime
 import shutil
-from flask import Blueprint, render_template, request, jsonify, Response, current_app
+from flask import Blueprint, render_template, request, jsonify, Response, current_app, session
 from src.common import login_required
 from src.common.storage import upload_file
+# --- [수정] execute_query 임포트 ---
+from src.common import execute_query
 from ultralytics import YOLO
 
 model_bp = Blueprint('model', __name__)
@@ -57,7 +59,7 @@ def video_feed(filename):
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-# 단일 프레임/이미지 탐지 (기존 AJAX 통신용)
+# 단일 프레임/이미지 탐지
 @model_bp.route('/detect', methods=['POST'])
 @login_required
 def detect_objects():
@@ -111,12 +113,24 @@ def save_result():
     file = request.files.get('merged_image')
     original_filename = request.form.get('original_filename', '')
 
+    # 1. 숫자 데이터 변환 (안전하게 처리)
+    try:
+        boar_count = int(request.form.get('boar_count', 0))
+        water_deer_count = int(request.form.get('water_deer_count', 0))
+        racoon_count = int(request.form.get('racoon_count', 0))
+    except (ValueError, TypeError):
+        boar_count = water_deer_count = racoon_count = 0
+
+    # 2. 유저 ID 추출 (90001 확인됨)
+    user_id = session.get('user_id')
+    print(f"--- [DEBUG] 현재 세션 user_id: {user_id} ---")
+
     if not file:
         return jsonify({"success": False, "message": "데이터가 없습니다."}), 400
 
     local_path = None
     try:
-        # 1. 경로 설정 및 폴더 생성 보장
+        # 경로 설정 및 폴더 생성
         save_dir = os.path.join(current_app.root_path, 'static', 'results')
         os.makedirs(save_dir, exist_ok=True)
         os.makedirs('static/temp', exist_ok=True)
@@ -125,14 +139,10 @@ def save_result():
         is_video = any(original_filename.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.mkv'])
 
         if is_video:
-            # --- [영상 처리 로직] ---
             temp_input = os.path.join('static', 'temp', f"temp_{original_filename}")
             file.save(temp_input)
-
-            # YOLO 결과 저장
+            # YOLO 분석 및 저장
             model.predict(source=temp_input, save=True, project=save_dir, name=now_str, conf=0.25)
-
-            # YOLO가 만든 폴더 안의 내용물을 확장자 관계없이 낚아채기
             yolo_output_dir = os.path.join(save_dir, now_str)
             files_in_yolo_dir = os.listdir(yolo_output_dir) if os.path.exists(yolo_output_dir) else []
 
@@ -146,30 +156,52 @@ def save_result():
                 shutil.rmtree(yolo_output_dir)
             else:
                 raise FileNotFoundError(f"YOLO가 결과 영상을 생성하지 못했습니다.")
-
-            if os.path.exists(temp_input):
-                os.remove(temp_input)
-
+            if os.path.exists(temp_input): os.remove(temp_input)
         else:
-            # --- [이미지 처리 로직: 누락됐던 부분 복구] ---
+            # 이미지 저장
             filename = f"detection_{now_str}.jpg"
             local_path = os.path.join(save_dir, filename)
-            file.save(local_path) # 전송된 이미지 파일을 로컬에 저장
+            file.save(local_path)
 
-        # 2. [공통] Cloudinary 업로드
+        # 3. Cloudinary 업로드 및 URL 획득 (여기가 핵심!)
+        result_url = None
         if local_path and os.path.exists(local_path):
             with open(local_path, 'rb') as f:
+                # Cloudinary 업로드 함수 호출
                 result_url = upload_file(f, folder="results")
+                print(f"--- [DEBUG] Cloudinary URL: {result_url} ---")
 
-            if result_url:
+        # 4. DB 저장
+        if result_url:
+            if user_id is None:
+                return jsonify({"success": False, "message": "로그인 정보가 없습니다."}), 401
+
+            try:
+                # 이제 user 테이블이 없으므로 members를 참조하거나 제약조건이 풀린 상태여야 함
+                sql = """
+                INSERT INTO ai_analysis 
+                (user_id, filename, boar_count, water_deer_count, racoon_count, created_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                """
+                execute_query(sql, (user_id, result_url, boar_count, water_deer_count, racoon_count))
+
+                # 성공 시 URL을 반드시 프론트엔드로 보내줌
                 return jsonify({
                     "success": True,
                     "url": result_url,
-                    "message": "로컬 및 클라우드 저장 성공!"
+                    "message": "Cloudinary 업로드 및 DB 저장 성공!"
                 })
 
-        return jsonify({"success": False, "message": "업로드 실패 (경로 확인 필요)"}), 500
+            except Exception as db_err:
+                print(f"--- [DB ERROR] {db_err} ---")
+                return jsonify({
+                    "success": False,
+                    "message": f"DB 저장 실패: {str(db_err)}",
+                    "url": result_url  # DB는 실패해도 URL은 일단 보내줌
+                }), 500
+
+        return jsonify({"success": False, "message": "파일 업로드 실패"}), 500
 
     except Exception as e:
-        print(f"Error during save_result: {e}")
+        print(f"--- [SYSTEM ERROR] {e} ---")
         return jsonify({"success": False, "message": str(e)}), 500

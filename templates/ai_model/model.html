@@ -375,7 +375,7 @@
 
     window.addEventListener('resize', () => { if (lastResult) drawBoundingBoxes(lastResult); });
 
-    // [최종 수정] 클라우드 저장 실행 로직 (디자인 유지 및 영상/사진 구분)
+// [최종 수정] 클라우드 저장 실행 로직 (Cloudinary URL 호출 보강)
     if(saveCloudBtn) {
         saveCloudBtn.onclick = async function() {
             if(!currentFile) return;
@@ -384,19 +384,27 @@
             const formData = new FormData();
             formData.append('original_filename', currentFile.name);
 
+            // --- [추가] 동물 탐지 숫자 데이터 같이 보내기 (서버 저장용) ---
+            formData.append('boar_count', totalCounts[0]);
+            formData.append('water_deer_count', totalCounts[1]);
+            formData.append('racoon_count', totalCounts[2]);
+            // ------------------------------------------------------
+
             if (isVideo) {
-                // 영상일 때는 원본 파일 자체를 전송 (서버에서 전체 분석 수행)
                 formData.append('merged_image', currentFile);
                 statusText.innerText = "전체 영상 분석 및 저장 중... 잠시만 기다려 주세요.";
             } else {
-                // 사진일 때는 기존처럼 캔버스 합본 전송
+                // 사진일 때는 현재 캔버스의 결과물을 추출해서 전송
                 const media = videoStream;
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = media.naturalWidth;
                 tempCanvas.height = media.naturalHeight;
                 const ctx = tempCanvas.getContext('2d');
                 ctx.drawImage(media, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                // [수정] 오버레이(박스)도 같이 그려서 저장
                 ctx.drawImage(overlayCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
                 const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.9));
                 formData.append('merged_image', blob, 'result.jpg');
                 statusText.innerText = "결과 이미지 저장 중...";
@@ -413,21 +421,21 @@
                 });
                 const resData = await response.json();
 
-            if (resData.success) {
+                if (resData.success && resData.url) {
                     alert("성공적으로 저장되었습니다!");
+                    console.log("Cloudinary URL:", resData.url); // 콘솔에서 URL 확인 가능
 
-                    // [수정] 팝업 차단을 우회하는 가장 확실한 방법
+                    // [핵심] 서버에서 받은 Cloudinary URL을 새 탭으로 열기
                     const link = document.createElement('a');
                     link.href = resData.url;
                     link.target = '_blank';
-                    link.rel = 'noopener noreferrer'; // 보안 및 성능 향상
                     document.body.appendChild(link);
-                    link.click(); // 가상으로 클릭 발생
-                    document.body.removeChild(link); // 클릭 후 요소 제거
+                    link.click();
+                    document.body.removeChild(link);
 
-                    statusText.innerText = "저장 완료! 새 탭을 확인하세요.";
+                    statusText.innerText = "저장 완료! URL: " + resData.url;
                 } else {
-                    alert("저장 실패: " + resData.message);
+                    alert("저장 실패: " + (resData.message || "URL을 받아오지 못했습니다."));
                 }
             } catch (err) {
                 console.error(err);
