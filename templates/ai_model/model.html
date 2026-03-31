@@ -88,6 +88,13 @@
                     <button type="submit" id="startBtn" class="btn btn-outline-secondary w-100 py-2" disabled>
                         분석 및 재생 시작
                     </button>
+
+                <button type="button" id="saveCloudBtn" class="btn w-100 py-2 mt-2" disabled
+                        style="font-weight: 600; color: #20828A; border: 2px solid #20828A; transition: 0.3s;"
+                        onmouseover="this.style.backgroundColor='#20828A'; this.style.color='white';"
+                        onmouseout="this.style.backgroundColor='transparent'; this.style.color='#20828A';">
+                    <i class="bi bi-cloud-upload me-2"></i> 분석 결과 클라우드 저장
+                </button>
                 </form>
                 <div class="mt-4">
                     <h3 class="h6 fw-bold border-bottom pb-2 mb-3">탐지된 객체 리스트</h3>
@@ -103,7 +110,6 @@
         </div>
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     let totalCounts = [0, 0, 0];
@@ -134,23 +140,23 @@
     const fileInput = document.getElementById('videoFile');
     const startBtn = document.getElementById('startBtn');
     const playBtn = document.getElementById('playBtn');
-    const playIcon = document.getElementById('playIcon'); // [추가] 아이콘 객체
+    const playIcon = document.getElementById('playIcon');
     const statusText = document.getElementById('statusText');
     const progressBar = document.getElementById('analysisProgress');
     const videoStream = document.getElementById('videoStream');
     const videoPlayer = document.getElementById('videoPlayer');
     const overlayCanvas = document.getElementById('overlayCanvas');
     const drawCtx = overlayCanvas.getContext('2d');
+    const saveCloudBtn = document.getElementById('saveCloudBtn');
 
     let analysisLoop = null;
     let lastResult = null;
     let isAnalysisActive = false;
-    let currentFile = null; // [추가] 현재 선택된 파일을 저장할 금고
+    let currentFile = null;
 
     fileInput.onchange = function() {
         if(this.files && this.files.length > 0) {
-            currentFile = this.files[0]; // [핵심] 금고에 파일 저장
-
+            currentFile = this.files[0];
             stopAnalysis();
             resetData();
             const fileURL = URL.createObjectURL(currentFile);
@@ -158,6 +164,7 @@
 
             startBtn.classList.replace('btn-outline-secondary', 'btn-teal');
             startBtn.disabled = false;
+            if(saveCloudBtn) saveCloudBtn.disabled = true;
 
             statusText.innerText = "준비 완료: " + currentFile.name;
             progressBar.style.width = "0%";
@@ -168,7 +175,7 @@
                 videoStream.style.display = 'none';
                 videoPlayer.style.display = 'block';
                 videoPlayer.src = fileURL;
-                videoPlayer.load(); // [핵심] 영상 다시 로드
+                videoPlayer.load();
                 playBtn.style.display = 'block';
                 playIcon.className = 'bi bi-play-circle-fill';
             } else {
@@ -187,29 +194,18 @@
         document.getElementById('detectionList').innerHTML = '<p class="text-muted small mb-0">분석을 시작하면 목록이 표시됩니다.</p>';
     }
 
-    // [종결] 재생/일시정지 및 아이콘 제어 통합 로직
     function toggleVideo() {
         if (videoPlayer.paused) {
             videoPlayer.play();
-            // 일시정지 아이콘으로 교체 후 0.5초 뒤 숨김
             playIcon.className = 'bi bi-pause-circle-fill';
             playBtn.style.display = 'block';
-            setTimeout(() => {
-                if (!videoPlayer.paused) playBtn.style.display = 'none';
-            }, 500);
-
+            setTimeout(() => { if (!videoPlayer.paused) playBtn.style.display = 'none'; }, 500);
             if (isAnalysisActive) startAnalysis();
         } else {
             videoPlayer.pause();
-            // 재생 아이콘으로 교체 후 계속 표시
             playIcon.className = 'bi bi-play-circle-fill';
             playBtn.style.display = 'block';
-
-            // 분석 루프만 정지 (상태는 유지)
-            if (analysisLoop) {
-                clearInterval(analysisLoop);
-                analysisLoop = null;
-            }
+            if (analysisLoop) { clearInterval(analysisLoop); analysisLoop = null; }
         }
     }
 
@@ -234,13 +230,12 @@
 
     document.getElementById('uploadForm').onsubmit = async function(e) {
         e.preventDefault();
-
-        // [수정] fileInput 대신 currentFile을 사용!
         const file = currentFile;
         if (!file) return;
 
         resetData();
         isAnalysisActive = true;
+        if(saveCloudBtn) saveCloudBtn.disabled = true;
 
         progressBar.style.transition = 'none';
         progressBar.style.width = "0%";
@@ -254,11 +249,10 @@
             progressBar.style.transition = 'width 2.0s ease-out';
             progressBar.style.width = "85%";
             progressBar.classList.add('progress-bar-animated');
-
             statusText.innerText = "분석 진행 중...";
 
             if (file.type.startsWith('video/')) {
-                playBtn.style.display = 'none'; // 분석 시작 시 아이콘 일단 숨김
+                playBtn.style.display = 'none';
                 videoPlayer.play();
                 startAnalysis();
             } else {
@@ -267,26 +261,22 @@
                 progressBar.style.width = "100%";
                 statusText.innerText = "분석 완료!";
                 progressBar.classList.remove('progress-bar-animated');
+                if(saveCloudBtn) saveCloudBtn.disabled = false;
             }
         }, 10);
     };
 
-    // [수정] 비디오 끝날 때 로직: '분석 모드'일 때만 결과 표시
     videoPlayer.onended = () => {
-        // 분석 중이었을 때만 실행
         if (isAnalysisActive) {
-            stopAnalysis(); // 분석 루프 및 플래그 종료
-
-            // 게이지 꽉 채우기 및 문구 변경
+            stopAnalysis();
             progressBar.style.transition = 'width 0.3s ease-in-out';
             progressBar.style.width = "100%";
             statusText.innerText = "분석 완료!";
             progressBar.classList.remove('progress-bar-animated');
+            if(saveCloudBtn) saveCloudBtn.disabled = false;
         } else {
-            // 그냥 미리보기 재생만 끝난 경우
             playBtn.style.display = 'block';
             playIcon.className = 'bi bi-play-circle-fill';
-            // statusText는 건드리지 않거나 "준비 완료" 상태 유지
         }
     };
 
@@ -309,37 +299,25 @@
                         accumulateData(result);
                         drawBoundingBoxes(result.detections);
                     }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    resolve();
-                }
+                } catch (err) { console.error(err); } finally { resolve(); }
             }, 'image/jpeg', 0.7);
         });
     }
 
     function accumulateData(result) {
-        result.counts.forEach((count, idx) => {
-            totalCounts[idx] += count;
-        });
-        // 실시간 반영을 위해 'none' 제거 및 데이터 갱신 명시
+        result.counts.forEach((count, idx) => { totalCounts[idx] += count; });
         if (statChart) {
             statChart.data.datasets[0].data = totalCounts;
             statChart.update();
         }
-
         const validDetections = result.detections.filter(d => parseFloat(d.conf) > 0.4);
         if (validDetections.length > 0) {
             const listContainer = document.getElementById('detectionList');
             if (listContainer.querySelector('p.text-muted')) listContainer.innerHTML = '';
-
             validDetections.forEach(d => {
                 const item = document.createElement('div');
                 item.className = "d-flex justify-content-between border-bottom py-1 small";
-                item.innerHTML = `
-                    <span class="text-primary fw-bold">${d.label}</span>
-                    <span class="text-muted">${d.conf} (탐지됨)</span>
-                `;
+                item.innerHTML = `<span class="text-primary fw-bold">${d.label}</span><span class="text-muted">${d.conf} (탐지됨)</span>`;
                 listContainer.insertBefore(item, listContainer.firstChild);
             });
         }
@@ -347,13 +325,12 @@
 
     function drawBoundingBoxes(detections) {
         const media = videoStream.style.display === 'block' ? videoStream : videoPlayer;
-        if (!media.clientWidth) return; // 미디어가 아직 로드되지 않은 경우 방지
+        if (!media.clientWidth) return;
 
         const mediaWidth = media.clientWidth;
         const mediaHeight = media.clientHeight;
         const nativeWidth = media.tagName === 'VIDEO' ? media.videoWidth : media.naturalWidth;
         const nativeHeight = media.tagName === 'VIDEO' ? media.videoHeight : media.naturalHeight;
-
         const mediaRatio = nativeWidth / nativeHeight;
         const containerRatio = mediaWidth / mediaHeight;
 
@@ -372,7 +349,6 @@
         overlayCanvas.style.top = media.offsetTop + (mediaHeight - displayHeight) / 2 + 'px';
 
         drawCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
         detections.forEach(det => {
             if (!det.bbox || parseFloat(det.conf) < 0.4) return;
             const [x1, y1, x2, y2] = det.bbox;
@@ -384,22 +360,91 @@
             drawCtx.strokeStyle = "#007BFF";
             drawCtx.lineWidth = 3;
             drawCtx.strokeRect(startX, startY, width, height);
-
             drawCtx.fillStyle = "#007BFF";
             drawCtx.font = "bold 14px Pretendard";
             const label = `${det.label} ${det.conf}`;
             const textWidth = drawCtx.measureText(label).width;
-
             const labelBgWidth = textWidth + 10;
             const labelBgHeight = 20;
             const labelY = startY - labelBgHeight < 0 ? startY : startY - labelBgHeight;
             drawCtx.fillRect(startX, labelY, labelBgWidth, labelBgHeight);
-
             drawCtx.fillStyle = "white";
             drawCtx.fillText(label, startX + 5, labelY + 15);
         });
     }
 
     window.addEventListener('resize', () => { if (lastResult) drawBoundingBoxes(lastResult); });
+
+// [최종 수정] 클라우드 저장 실행 로직 (Cloudinary URL 호출 보강)
+    if(saveCloudBtn) {
+        saveCloudBtn.onclick = async function() {
+            if(!currentFile) return;
+
+            const isVideo = currentFile.type.startsWith('video/');
+            const formData = new FormData();
+            formData.append('original_filename', currentFile.name);
+
+            // --- [추가] 동물 탐지 숫자 데이터 같이 보내기 (서버 저장용) ---
+            formData.append('boar_count', totalCounts[0]);
+            formData.append('water_deer_count', totalCounts[1]);
+            formData.append('racoon_count', totalCounts[2]);
+            // ------------------------------------------------------
+
+            if (isVideo) {
+                formData.append('merged_image', currentFile);
+                statusText.innerText = "전체 영상 분석 및 저장 중... 잠시만 기다려 주세요.";
+            } else {
+                // 사진일 때는 현재 캔버스의 결과물을 추출해서 전송
+                const media = videoStream;
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = media.naturalWidth;
+                tempCanvas.height = media.naturalHeight;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(media, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                // [수정] 오버레이(박스)도 같이 그려서 저장
+                ctx.drawImage(overlayCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+                formData.append('merged_image', blob, 'result.jpg');
+                statusText.innerText = "결과 이미지 저장 중...";
+            }
+
+            const originalBtnText = saveCloudBtn.innerHTML;
+            saveCloudBtn.disabled = true;
+            saveCloudBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>처리 중...';
+
+            try {
+                const response = await fetch("{{ url_for('model.save_result') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+                const resData = await response.json();
+
+                if (resData.success && resData.url) {
+                    alert("성공적으로 저장되었습니다!");
+                    console.log("Cloudinary URL:", resData.url); // 콘솔에서 URL 확인 가능
+
+                    // [핵심] 서버에서 받은 Cloudinary URL을 새 탭으로 열기
+                    const link = document.createElement('a');
+                    link.href = resData.url;
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    statusText.innerText = "저장 완료! URL: " + resData.url;
+                } else {
+                    alert("저장 실패: " + (resData.message || "URL을 받아오지 못했습니다."));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("서버 통신 오류가 발생했습니다.");
+            } finally {
+                saveCloudBtn.disabled = false;
+                saveCloudBtn.innerHTML = originalBtnText;
+            }
+        };
+    }
 </script>
 {% endblock %}
