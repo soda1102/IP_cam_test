@@ -1,0 +1,164 @@
+{% extends "admin/base.html" %}
+ 
+{% block title %}도(道)서관 — 게시글 관리{% endblock %}
+{% block topbar_title %}💬 게시글 관리{% endblock %}
+ 
+{% block content %}
+<div class="section-title">게시글 / 커뮤니티 관리</div>
+<div class="section-sub">신고 처리 · 노출 관리 · 공지 등록</div>
+ 
+<form method="GET" action="{{ url_for('admin.posts') }}">
+    <div class="filter-bar">
+        <input class="search-input" type="text" name="q"
+               placeholder="🔍 게시글 제목 또는 작성자 검색..."
+               value="{{ search_q }}">
+        <select class="filter-select" name="category" onchange="this.form.submit()">
+            <option value="">전체 카테고리</option>
+            <option value="notice" {% if filter_category == 'notice' %}selected{% endif %}>공지</option>
+            <option value="normal" {% if filter_category == 'normal' %}selected{% endif %}>일반</option>
+        </select>
+        <select class="filter-select" name="status" onchange="this.form.submit()">
+            <option value="">전체 상태</option>
+            <option value="normal"   {% if filter_status == 'normal'   %}selected{% endif %}>정상</option>
+            <option value="reported" {% if filter_status == 'reported' %}selected{% endif %}>신고</option>
+            <option value="hidden"   {% if filter_status == 'hidden'   %}selected{% endif %}>숨김</option>
+        </select>
+        <button type="submit" class="topbar-btn">검색</button>
+    </div>
+</form>
+ 
+<div class="panel">
+    <div class="table-scroll-wrap">
+        <table class="data-table" style="table-layout:fixed;min-width:780px;">
+            <thead>
+                <tr>
+                    <th style="width:60px;">번호</th>
+                    <th style="width:80px;">카테고리</th>
+                    <th style="width:260px;">제목</th>
+                    <th style="width:80px;">작성자</th>
+                    <th style="width:90px;">작성일</th>
+                    <th style="width:70px;">조회수</th>
+                    <th style="width:70px;">신고수</th>
+                    <th style="width:70px;">상태</th>
+                    <th style="width:220px;min-width:220px;">관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for board in boards %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:.8rem">{{ board['id'] }}</td>
+                    <td>
+                        {% if board['is_pinned'] %}
+                            <span class="badge badge-notice">공지</span>
+                        {% else %}
+                            <span class="badge badge-review">일반</span>
+                        {% endif %}
+                    </td>
+                    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;text-align:left">
+                        <strong>{{ board['title'] }}</strong>
+                    </td>
+                    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        {{ board['author'] or board['nickname'] or '(정보없음)' }}
+                    </td>
+                    <td style="color:var(--text-muted)">{{ board['created_at'].strftime('%Y.%m.%d') }}</td>
+                    <td style="color:var(--text-muted)">{{ board['visits'] }}</td>
+                    <td>
+                        {% if board['report_count'] > 0 %}
+                            <span style="color:var(--danger);font-weight:800;">{{ board['report_count'] }}</span>
+                        {% else %}0{% endif %}
+                    </td>
+                    <td>
+                        {% if not board['active'] %}
+                            <span class="badge badge-inactive">숨김</span>
+                        {% elif board['report_count'] > 0 %}
+                            <span class="badge badge-banned">신고</span>
+                        {% else %}
+                            <span class="badge badge-active">정상</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button class="action-btn" onclick="openBoardDetail({{ board['id'] }})">상세</button>
+                        {% if not board['active'] %}
+                            <button class="action-btn" onclick="boardAction('/admin/board/restore/{{ board['id'] }}')">복구</button>
+                        {% elif board['report_count'] > 0 %}
+                            <button class="action-btn" onclick="boardAction('/admin/board/unreport/{{ board['id'] }}')">신고 해제</button>
+                            <button class="action-btn danger" onclick="boardAction('/admin/board/hide/{{ board['id'] }}')">숨김</button>
+                        {% elif board['is_pinned'] %}
+                            <button class="action-btn danger" onclick="boardAction('/admin/board/hide/{{ board['id'] }}')">숨김</button>
+                        {% else %}
+                            <button class="action-btn" onclick="boardAction('/admin/board/pin/{{ board['id'] }}')">공지 등록</button>
+                            <button class="action-btn danger" onclick="boardAction('/admin/board/hide/{{ board['id'] }}')">숨김</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align:center;color:var(--text-muted);padding:30px">
+                        등록된 게시글이 없습니다.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+ 
+<!-- 페이지네이션 -->
+{% if total_pages > 1 %}
+<div class="pagination-wrap">
+    {% if page > 1 %}
+        <a href="{{ url_for('admin.posts', page=page-1, q=search_q, category=filter_category, status=filter_status) }}"
+           class="page-btn">‹</a>
+    {% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        <a href="{{ url_for('admin.posts', page=p, q=search_q, category=filter_category, status=filter_status) }}"
+           class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+    {% endfor %}
+    {% if page < total_pages %}
+        <a href="{{ url_for('admin.posts', page=page+1, q=search_q, category=filter_category, status=filter_status) }}"
+           class="page-btn">›</a>
+    {% endif %}
+</div>
+{% endif %}
+ 
+<!-- ===== 게시글 상세보기 모달 ===== -->
+<div class="modal-overlay" id="boardDetailModal" onclick="if(event.target===this)closeBoardDetail()">
+    <div class="modal-box" style="width:580px;max-width:96vw;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div>
+                <div class="modal-title" id="detail_title" style="margin-bottom:4px;"></div>
+                <div style="font-size:.8rem;color:var(--text-muted);font-weight:500;">
+                    👤 <span id="detail_author"></span>
+                    &nbsp;·&nbsp;
+                    🕐 <span id="detail_created_at"></span>
+                    &nbsp;·&nbsp;
+                    👁 <span id="detail_visits"></span>회
+                </div>
+            </div>
+            <button onclick="closeBoardDetail()"
+                    style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);padding:0 4px;">✕</button>
+        </div>
+        <div id="detail_content"
+             style="min-height:140px;max-height:320px;overflow-y:auto;
+                    line-height:1.8;font-size:.9rem;font-weight:500;
+                    padding:16px 18px;background:#f8fafa;border-radius:10px;
+                    border:1px solid var(--border);">
+        </div>
+        <div id="detail_reports_wrap" style="display:none;margin-top:14px;">
+            <div style="font-size:.78rem;font-weight:700;color:var(--danger);margin-bottom:8px;">🚨 신고 사유</div>
+            <div id="detail_reports"
+                 style="background:rgba(231,76,60,0.05);border:1px solid rgba(231,76,60,0.2);
+                        border-radius:10px;padding:12px 16px;font-size:.85rem;
+                        font-weight:500;line-height:1.7;color:var(--charcoal);">
+            </div>
+        </div>
+        <div class="modal-footer" style="margin-top:20px;">
+            <button class="topbar-btn" onclick="closeBoardDetail()">닫기</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+ 
+{% block scripts %}
+<script src="/static/js/admin/admin_posts.js"></script>
+{% endblock %}

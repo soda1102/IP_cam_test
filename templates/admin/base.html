@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}도(道)서관 — 관리자{% endblock %}</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <link rel="stylesheet" href="/static/css/admin/admin_base.css">
+    {% block extra_style %}{% endblock %}
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <a href="/" style="display:flex;align-items:center;gap:12px;text-decoration:none;">
+            <div class="logo-mark" style="background:white;">
+                <img src="/static/logo/the_road_library_logo.png" alt="로고"
+                     style="width:40px;height:40px;object-fit:contain;border-radius:10px;">
+            </div>
+            <div>
+                <div class="brand-text">도(道)서관</div>
+                <div class="brand-sub">ADMIN PANEL</div>
+            </div>
+        </a>
+    </div>
+
+    <nav>
+        <div class="sidebar-section-label">Overview</div>
+        <a class="nav-item {% if active_nav == 'dashboard' %}active{% endif %}"
+           href="{{ url_for('admin.dashboard') }}">
+            <span class="nav-icon">📊</span> 대시보드
+        </a>
+
+        <div class="sidebar-section-label">Management</div>
+        <a class="nav-item {% if active_nav == 'members' %}active{% endif %}"
+           href="{{ url_for('admin.members') }}">
+            <span class="nav-icon">👤</span> 회원 관리
+            {% if new_members_count and new_members_count > 0 %}
+                <span class="nav-badge">{{ new_members_count }}</span>
+            {% endif %}
+        </a>
+        <a class="nav-item {% if active_nav == 'posts' %}active{% endif %}"
+           href="{{ url_for('admin.posts') }}">
+            <span class="nav-icon">💬</span> 게시글 관리
+            {% if new_boards_count and new_boards_count > 0 %}
+                <span class="nav-badge">{{ new_boards_count }}</span>
+            {% endif %}
+        </a>
+        <a class="nav-item {% if active_nav == 'files' %}active{% endif %}"
+           href="{{ url_for('admin.files') }}">
+            <span class="nav-icon">📂</span> AI 자료실
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="/mypage" style="text-decoration:none;">
+            <div class="admin-profile">
+                <div class="admin-avatar">
+                    {% if current_user_img %}
+                        <img src="{{ current_user_img }}" alt="프로필">
+                    {% else %}
+                        {{ current_user_name[0] if current_user_name else '?' }}
+                    {% endif %}
+                </div>
+                <div class="admin-info">
+                    <div class="name">{{ current_user_name }}</div>
+                    <div class="role">
+                        {% if current_user_role == 'admin' %}관리자
+                        {% elif current_user_role == 'manager' %}매니져
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+    <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="hamburger" onclick="toggleSidebar()">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="topbar-title">{% block topbar_title %}{% endblock %}</div>
+        </div>
+        <div class="topbar-actions">
+            <button class="topbar-btn" onclick="showToast('🔔 알림이 없습니다.')">🔔 알림</button>
+            {% block topbar_extra %}{% endblock %}
+        </div>
+    </div>
+
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+<div class="v-tooltip" id="v-tooltip"></div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<script src="/static/js/admin/admin_base.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

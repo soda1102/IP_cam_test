@@ -1,0 +1,214 @@
+{% extends "admin/base.html" %}
+ 
+{% block title %}도(道)서관 — 회원 관리{% endblock %}
+{% block topbar_title %}👤 회원 관리{% endblock %}
+ 
+{% block topbar_extra %}
+<button class="topbar-btn primary" onclick="openAddMemberModal()">+ 회원 추가</button>
+{% endblock %}
+ 
+{% block extra_style %}
+{% endblock %}
+ 
+{% block content %}
+<div class="section-title">회원 관리</div>
+<div class="section-sub">전체 회원 목록 · 상태 변경 · 등급 조정</div>
+ 
+<form method="GET" action="{{ url_for('admin.members') }}" id="filterForm">
+    <div class="filter-bar">
+        <input class="search-input" type="text" name="q"
+               placeholder="🔍 이름 또는 UID 검색"
+               value="{{ search_q }}">
+        <select class="filter-select" name="role" onchange="this.form.submit()">
+            <option value="">전체 등급</option>
+            <option value="admin"   {% if filter_role == 'admin'   %}selected{% endif %}>도 (관리자)</option>
+            <option value="manager" {% if filter_role == 'manager' %}selected{% endif %}>레 (매니저)</option>
+            <option value="user"    {% if filter_role == 'user'    %}selected{% endif %}>미 (일반)</option>
+        </select>
+        <select class="filter-select" name="active" onchange="this.form.submit()">
+            <option value="">전체 상태</option>
+            <option value="1" {% if filter_active == '1' %}selected{% endif %}>활성</option>
+            <option value="0" {% if filter_active == '0' %}selected{% endif %}>비활성</option>
+        </select>
+        <button type="submit" class="topbar-btn">검색</button>
+    </div>
+</form>
+ 
+<div class="panel">
+    <div class="table-scroll-wrap">
+        <table class="data-table" style="table-layout:fixed;min-width:620px;">
+            <thead>
+                <tr>
+                    <th style="width:60px;">ID</th>
+                    <th style="width:120px;">UID</th>
+                    <th style="width:100px;">이름</th>
+                    <th style="width:100px;">닉네임</th>
+                    <th style="width:70px;">등급</th>
+                    <th style="width:100px;">가입일</th>
+                    <th style="width:70px;">상태</th>
+                    <th style="width:160px;min-width:160px;">관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:.78rem">{{ member['id'] }}</td>
+                    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ member['uid'] }}</td>
+                    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><strong>{{ member['name'] }}</strong></td>
+                    <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><strong>{{ member['nickname'] or '익명' }}</strong></td>
+                    <td>
+                        {% if member['role'] == 'admin' %}
+                            <span class="badge" style="background-color:#dc3545;color:#fff">도</span>
+                        {% elif member['role'] == 'manager' %}
+                            <span class="badge" style="background-color:#fd8a69;color:#000">레</span>
+                        {% else %}
+                            <span class="badge" style="background-color:#b8e5e0;color:#20828a">미</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--text-muted)">{{ member['created_at'].strftime('%Y.%m.%d') }}</td>
+                    <td>
+                        {% if member['active'] == 1 %}
+                            <span class="badge badge-active">활성</span>
+                        {% else %}
+                            <span class="badge badge-inactive">비활성</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button class="action-btn" onclick="openEditMemberModal(
+                            '{{ member['id'] }}',
+                            '{{ member['name'] }}',
+                            '{{ member['nickname'] or '' }}',
+                            '{{ member['role'] }}',
+                            {{ member['active'] }},
+                            '{{ member['birthdate'] or '' }}'
+                        )">수정</button>
+                        <button class="action-btn danger"
+                                onclick="openToggleConfirm('{{ member['id'] }}', '{{ member['name'] }}')">활성여부</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px">
+                        등록된 회원이 없습니다.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+ 
+<!-- 페이지네이션 -->
+{% if total_pages > 1 %}
+<div class="pagination-wrap">
+    {% if page > 1 %}
+        <a href="{{ url_for('admin.members', page=page-1, q=search_q, role=filter_role, active=filter_active) }}"
+           class="page-btn">‹</a>
+    {% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        <a href="{{ url_for('admin.members', page=p, q=search_q, role=filter_role, active=filter_active) }}"
+           class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+    {% endfor %}
+    {% if page < total_pages %}
+        <a href="{{ url_for('admin.members', page=page+1, q=search_q, role=filter_role, active=filter_active) }}"
+           class="page-btn">›</a>
+    {% endif %}
+</div>
+{% endif %}
+ 
+<!-- ===== 회원 추가 모달 ===== -->
+<div class="modal-overlay" id="addMemberModal" onclick="if(event.target===this)closeAddMemberModal()">
+    <div class="modal-box">
+        <div class="modal-title">👤 회원 추가</div>
+        <form id="addMemberForm" action="{{ url_for('admin.add_member') }}" method="POST">
+            <div class="modal-field">
+                <label class="modal-label">UID</label>
+                <input class="modal-input" type="text" name="uid" placeholder="예: hong123" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">이름</label>
+                <input class="modal-input" type="text" name="name" placeholder="예: 홍길동" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">닉네임</label>
+                <input class="modal-input" type="text" name="nickname" placeholder="닉네임 입력" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">비밀번호</label>
+                <input class="modal-input" type="password" name="password" placeholder="비밀번호 입력" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">생년월일 <span style="font-weight:400;color:var(--text-muted)">(선택)</span></label>
+                <input class="modal-input" type="date" name="birthdate">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="topbar-btn" onclick="closeAddMemberModal()">취소</button>
+                <button type="submit" class="topbar-btn primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+ 
+<!-- ===== 회원 수정 모달 ===== -->
+<div class="modal-overlay" id="editMemberModal" onclick="if(event.target===this)closeEditMemberModal()">
+    <div class="modal-box">
+        <div class="modal-title">✏️ 회원 정보 수정</div>
+        <form id="editMemberForm" method="POST">
+            <div class="modal-field">
+                <label class="modal-label">이름</label>
+                <input class="modal-input" type="text" name="name" id="edit_name" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">닉네임</label>
+                <input class="modal-input" type="text" name="nickname" id="edit_nickname" required>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">새 비밀번호 <span style="font-weight:400;color:var(--text-muted)">(변경 시에만 입력)</span></label>
+                <input class="modal-input" type="password" name="password" id="edit_password" placeholder="비워두면 변경 안 됨">
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">등급</label>
+                <select class="modal-input" name="role" id="edit_role">
+                    <option value="user">미 (일반)</option>
+                    <option value="manager">레 (매니저)</option>
+                    <option value="admin">도 (관리자)</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">상태</label>
+                <select class="modal-input" name="active" id="edit_active">
+                    <option value="1">활성</option>
+                    <option value="0">비활성</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">생년월일</label>
+                <input class="modal-input" type="date" name="birthdate" id="edit_birthdate">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="topbar-btn" onclick="closeEditMemberModal()">취소</button>
+                <button type="submit" class="topbar-btn primary">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+ 
+<!-- ===== 활성여부 확인 모달 ===== -->
+<div class="modal-overlay" id="toggleConfirmModal" onclick="if(event.target===this)closeToggleConfirm()">
+    <div class="modal-box sm">
+        <div class="modal-title">🔄 활성화 변경</div>
+        <div class="modal-confirm-desc" id="toggle-confirm-desc">이 회원을 변경하시겠습니까?<br>신중한 선택 바랍니다.</div>
+        <form id="toggleForm" method="POST">
+            <div class="modal-footer" style="justify-content:center;">
+                <button type="button" class="topbar-btn" onclick="closeToggleConfirm()">취소</button>
+                <button type="submit" class="topbar-btn"
+                        style="background:var(--danger);color:#fff;border-color:var(--danger);">변경 확인</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+ 
+{% block scripts %}
+<script src="/static/js/admin/admin_members.js"></script>
+{% endblock %}
