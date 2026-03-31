@@ -1,16 +1,29 @@
 <nav class="navbar navbar-expand-lg sticky-top py-3">
+    <style>
+        .dropdown-toggle::after {
+            border: none !important; /* 화살표를 만드는 테두리를 제거 */
+            margin: 0 !important;   /* 화살표 공간 제거 */
+            display: inline-block;  /* 요소 자체는 살려둠 (기존 구조 유지) */
+        }
+    </style>
+
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="/">
             <img src="{{ url_for('static', filename='logo/the_road_library_logo.png') }}" alt="로고" width="60" height="60" class="me-2">
             <span class="fw-bold">도(道)서관</span>
         </a>
+
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
         <div class="collapse navbar-collapse" id="navbarNav">
             <div class="flex-grow-1"></div>
 
-            <ul class="navbar-nav gap-4">
+            <ul class="navbar-nav gap-lg-4 mt-3 mt-lg-0">
                 <li class="nav-item dropdown">
-                    <a class="nav-link" href="#">소개</a>
-                    <ul class="dropdown-menu">
+                    <a class="nav-link dropdown-toggle" href="#" id="introDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">소개</a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="introDropdown">
                         <li><a class="dropdown-item" href="/introduce/background">프로젝트 배경</a></li>
                         <li><a class="dropdown-item" href="/introduce/logo">BI 소개</a></li>
                         <li><a class="dropdown-item" href="/introduce/process">개발 과정</a></li>
@@ -18,13 +31,21 @@
                     </ul>
                 </li>
                 <li class="nav-item"><a class="nav-link" href="/model">도(道)와주세요</a></li>
-                <li class="nav-item"><a class="nav-link" href="/board/list">도(道)란도란</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">도(道)란도란</a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="/board/list?category=free">자유 게시판</a></li>
+                        <li><a class="dropdown-item" href="/board/list?category=info">정보 게시판</a></li>
+                        <li><a class="dropdown-item" href="/board/list?category=qna">도(道)를 아십니까?</a></li>
+                    </ul>
+                </li>
                 <li class="nav-item"><a class="nav-link" href="/tip">도(道)움말</a></li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link" href="#">마이페이지</a>
-                    <ul class="dropdown-menu">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">마이페이지</a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="/mypage">회원 정보</a></li>
                         <li><a class="dropdown-item" href="/mypage/my_activity">나의 활동</a></li>
+                        <li><a class="dropdown-item" href="/mypage/ai_results">AI 분석 결과</a></li>
                     </ul>
                 </li>
                 {% if session.get('user_role') in ('admin','manager') %}
@@ -32,14 +53,14 @@
                 {% endif %}
             </ul>
 
-            <div class="d-flex align-items-center gap-3 flex-grow-1 justify-content-end">
+            <div class="d-flex align-items-center gap-3 flex-grow-1 justify-content-lg-end mt-4 mt-lg-0 pb-3 pb-lg-0">
                 {% if not session.get('user_id') %}
                     <a href="/auth/login" class="text-decoration-none text-muted small fw-medium">로그인</a>
                     <a href="/auth/signup" class="btn btn-sm text-white px-3 rounded-pill shadow-sm" style="background-color: var(--primary-teal); font-size: 0.85rem;">
                         회원가입
                     </a>
                 {% else %}
-                    <div class="d-flex align-items-center bg-light px-3 py-1 rounded-pill border shadow-sm">
+                    <div class="d-flex align-items-center bg-light px-3 py-1 rounded-pill border shadow-sm w-auto">
                         {% set role = session.get('user_role') %}
                         {% if role == 'admin' %}
                             <span class="badge rounded-pill bg-danger me-2" style="font-size: 0.7rem;">도(관리자)</span>

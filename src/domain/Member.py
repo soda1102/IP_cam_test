@@ -35,11 +35,12 @@ class Member:
             nickname=row.get('nickname'),
             profile_img=row.get('profile_img'),
             active=bool(row.get('active')), # active : 1 -> True
-            created_at = row.get('created_at')
+            created_at = row.get('created_at'),
+            birth_day = row.get('birthdate'),
         )
 
     def is_admin(self):   # role이 admin 인지 확인하는 메서드
         return self.role == "admin"
 
     def __str__(self): # member객체를 문자열로 출력할 때 사용(테스트용)
-        return f"{self.name}({self.uid}:{self.pw}) [{self.role} ]"
+        return f"{self.name}({self.uid}:{self.pw}) [{self.role} ]{self.birth_day}"

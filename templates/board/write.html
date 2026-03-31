@@ -110,6 +110,15 @@
             </div>
 
             <div class="mb-4">
+                <label class="form-label fw-bold medium text-muted mb-2 ms-1">게시판 선택</label>
+                <select name="category" id="categorySelect" class="form-select custom-select bg-white" required>
+                    <option value="free" {% if current_category == 'free' %}selected{% endif %}>자유게시판</option>
+                    <option value="info" {% if current_category == 'info' %}selected{% endif %}>정보게시판</option>
+                    <option value="qna" {% if current_category == 'qna' %}selected{% endif %}>Q&A 게시판</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <label class="form-label fw-bold medium text-muted mb-0 ms-1">제목</label>
 
@@ -145,12 +154,12 @@
             <hr class="mt-4 mb-3" style="border-top: 1px solid #dee2e6; opacity: 0.5;">
 
             <div class="d-flex justify-content-end align-items-center gap-2 py-4">
-                <a href="/board/list" class="btn btn-light px-4 py-2 rounded-pill fw-bold shadow-sm"
+                <a href="/board/list?category={{ current_category }}" class="btn btn-light px-4 py-2 rounded-pill fw-bold shadow-sm"
                    style="color: #212529; border: 1px solid #dee2e6; background-color: #fff;">
                    취소
                 </a>
                 <button type="submit" id="submitBtn" class="btn btn-primary px-5 py-2 rounded-pill fw-bold border-0"
-                        style="background-color: var(--primary-teal);" disabled>
+                        style="background-color: var(--primary-teal)" disabled>
                     <i class="bi bi-check-lg me-1"></i> 등록하기
                 </button>
             </div>

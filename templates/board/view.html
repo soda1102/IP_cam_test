@@ -115,6 +115,12 @@
     .view-content .ql-size-small { font-size: 0.75em; }
     .view-content .ql-size-large { font-size: 1.5em; }
     .view-content .ql-size-huge { font-size: 2.5em; }
+
+    /* 닉네임에 마우스 올렸을 때 색상 변화 */
+    .hover-opacity:hover {
+    opacity: 0.7;
+    transition: 0.2s;
+    }
 </style>
 
 <div class="container mt-5" style="max-width: 900px;">
@@ -132,9 +138,16 @@
 
             <div class="d-flex justify-content-between align-items-center text-muted small">
                 <div class="d-flex align-items-center">
-                    <img src="{{ board.writer_profile if board.writer_profile else 'https://raw.githubusercontent.com/twbs/icons/main/icons/person-circle.svg' }}"
-                         class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
-                    <span class="fw-bold text-dark me-3">{{ board.writer_nickname if board.writer_nickname else board.writer_name }}</span>
+                    <a href="/profile/{{ board.member_id }}">
+                        <img src="{{ board.writer_profile if board.writer_profile else url_for('static', filename='logo/the_road_library_logo.png') }}"
+                             class="rounded-circle me-2 shadow-sm"
+                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #eee;">
+                    </a>
+
+                    <a href="/profile/{{ board.member_id }}" class="text-decoration-none fw-bold text-dark me-3 hover-opacity">
+                        {{ board.writer_nickname if board.writer_nickname else board.writer_name }}
+                    </a>
+
                     <span>{{ board.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
                 </div>
                 <div>
@@ -206,7 +219,8 @@
                     </button>
                 {% endif %}
                 {% if session.get('user_id') and session.get('user_id')  != board.member_id %}
-                <button class="btn btn-link text-warning text-decoration-none fw-bold" data-bs-toggle="modal" data-bs-target="#reportModal">신고</button>
+                <button class="btn btn-link text-warning text-decoration-none fw-bold"
+                        onclick="openReportModal('board', {{ board.id }})">신고</button>
                 {% endif %}
             </div>
         </div>
@@ -224,23 +238,71 @@
 
             {% macro render_comment(comment_list) %}
                 {% for c in comment_list %}
-                <div class="mb-4 {% if c.parent_id %}ms-5 ps-3 border-start border-2{% endif %}" id="comment-{{ c.id }}">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="fw-bold text-dark me-2">{{ c.writer_nickname if c.writer_nickname else c.writer_name }}</span>
-                            <small class="text-muted">{{ c.created_at }}</small>
-                        </div>
-                        <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted small" onclick="toggleReplyForm({{ c.id }})">답글</button>
-                    </div>
-                    <p class="mb-2 text-secondary">{{ c.content | safe }}</p>
+                <div class="mb-4 {% if c.parent_id %}ms-5 ps-3 border-start border-2{% endif %}" id="comment-container-{{ c.id }}">
 
-                    <div id="reply-form-{{ c.id }}" class="mt-3 d-none">
-                        <div class="input-group input-group-sm bg-white p-2 rounded-3 shadow-sm">
-                            <input type="text" id="reply-input-{{ c.id }}" class="form-control border-0" placeholder="답글을 입력하세요">
-                            <button class="btn btn-library rounded-2 px-3" onclick="submitComment({{ c.id }})">등록</button>
+                    {# 1. 차단된 사용자 처리 로직 추가 (기존 코드를 else로 감쌈) #}
+                    {% if c.is_blocked > 0 %}
+                        <div class="p-3 bg-light rounded-3 text-muted small d-flex align-items-center mb-2"
+                             style="border-left: 4px solid #dc3545;">
+                            <i class="bi bi-slash-circle me-2"></i>
+                            <span class="fw-medium">차단한 사용자가 남긴 댓글입니다.</span>
                         </div>
-                    </div>
+                    {% else %}
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="fw-bold text-dark me-2">
+                                    {{ c.writer_nickname if c.writer_nickname else c.writer_name }}
+                                </span>
+                                <small class="text-muted">{{ c.created_at }}</small>
+                            </div>
 
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted small" onclick="toggleReplyForm({{ c.id }})">답글</button>
+
+                                {# 내 댓글이 아닐 때만 신고 버튼 노출 #}
+                                {% if session.get('user_id') != c.member_id and c.content != '클린봇에 의해 삭제된 댓글입니다.' %}
+                                <span class="text-muted small">|</span>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-warning small fw-semibold"
+                                        onclick="openReportModal('comment', {{ c.id }})">신고</button>
+                                {% endif %}
+
+                                {# 내용이 '삭제된 댓글입니다.'가 아닐 때만 수정/삭제 버튼 노출 #}
+                                {% if session.get('user_id') == c.member_id and c.content != '삭제된 댓글입니다.' %}
+                                <span class="text-muted small">|</span>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted small" onclick="showEditForm({{ c.id }})">수정</button>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-danger small" onclick="deleteComment({{ c.id }})">삭제</button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div id="comment-body-{{ c.id }}">
+                            {# 삭제된 댓글은 글씨를 흐리게(text-muted) 표현 #}
+                            <p class="mb-2 {% if c.content == '삭제된 댓글입니다.' %}text-muted fst-italic{% else %}text-secondary{% endif %}" id="comment-text-{{ c.id }}">
+                                {{ c.content | safe }}
+                            </p>
+                        </div>
+
+                        <div id="edit-form-{{ c.id }}" class="mt-2 d-none">
+                            <div class="card library-comment-card" style="background-color: var(--primary-light-teal); border: none;">
+                                <div class="card-body p-2">
+                                    <textarea id="edit-input-{{ c.id }}" class="form-control comment-input mb-2" rows="2" style="resize: none;"></textarea>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="hideEditForm({{ c.id }})">취소</button>
+                                        <button type="button" class="btn btn-sm btn-library rounded-pill px-3" onclick="submitEdit({{ c.id }})">수정완료</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="reply-form-{{ c.id }}" class="mt-3 d-none">
+                            <div class="input-group input-group-sm bg-white p-2 rounded-3 shadow-sm border">
+                                <input type="text" id="reply-input-{{ c.id }}" class="form-control border-0" placeholder="답글을 입력하세요">
+                                <button class="btn btn-library rounded-2 px-3" onclick="submitComment({{ c.id }})">등록</button>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {# 대댓글 리스트 출력 (이 부분은 차단 여부와 상관없이 구조 유지를 위해 유지) #}
                     {% if c.children %}
                     <div class="children-list mt-3">
                         {{ render_comment(c.children) }}
@@ -410,16 +472,135 @@
         var content = document.querySelector('input[name=content]');
         content.value = quill.root.innerHTML;
     };
+
+    // 1. 수정창 열기 (기존 내용 숨기고 입력창 보이기)
+    function showEditForm(id) {
+        const content = document.getElementById(`comment-text-${id}`).innerText;
+        document.getElementById(`comment-body-${id}`).classList.add('d-none');
+        document.getElementById(`edit-form-${id}`).classList.remove('d-none');
+        document.getElementById(`edit-input-${id}`).value = content;
+    }
+
+    // 2. 수정창 닫기 (취소 버튼)
+    function hideEditForm(id) {
+        document.getElementById(`comment-body-${id}`).classList.remove('d-none');
+        document.getElementById(`edit-form-${id}`).classList.add('d-none');
+    }
+
+    // 3. 수정 완료 처리 (서버 전송 + 알림창)
+    function submitEdit(id) {
+        const newContent = document.getElementById(`edit-input-${id}`).value;
+
+        if (!newContent.trim()) {
+            alert("내용을 입력해주세요.");
+            return;
+        }
+
+        fetch(`/board/comment/edit/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: newContent })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("수정 완료!"); // 요청하신 알림창
+                location.reload();
+            } else {
+                alert(data.message || "수정 실패");
+            }
+        })
+        .catch(err => alert("서버 통신 오류가 발생했습니다."));
+    }
+
+    // 4. 삭제 처리 (알림창)
+    function deleteComment(id) {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        fetch(`/board/comment/delete/${id}`, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("삭제 완료!"); // 요청하신 알림창
+                location.reload();
+            } else {
+                alert(data.message || "삭제 실패");
+            }
+        });
+    }
+
+// 신고 모달 열기 (중복 실행 방지 버전)
+let reportModalInstance = null; // 인스턴스를 전역으로 관리
+
+function openReportModal(type, targetId) {
+    document.getElementById('report-type').value = type;
+    document.getElementById('report-target-id').value = targetId;
+
+    const label = document.getElementById('reportModalLabel');
+    if (type === 'board') {
+        label.innerHTML = '<i class="bi bi-alarm me-2"></i>게시글 신고하기';
+    } else {
+        label.innerHTML = '<i class="bi bi-alarm me-2"></i>댓글 신고하기';
+    }
+
+    // 모달 인스턴스가 없으면 새로 만들고, 있으면 있는 걸 띄움
+    if (!reportModalInstance) {
+        reportModalInstance = new bootstrap.Modal(document.getElementById('reportModal'));
+    }
+    reportModalInstance.show();
+}
+
+// 신고 제출 함수
+function submitReport() {
+    const type = document.getElementById('report-type').value;
+    const targetId = document.getElementById('report-target-id').value;
+    const reason = document.getElementById('report-reason-select').value;
+    const detail = document.getElementById('report-detail').value;
+
+    if (!reason) {
+        alert("신고 사유를 선택해주세요.");
+        return;
+    }
+
+    fetch('/board/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: type,
+            target_id: targetId,
+            reason: reason,
+            detail: detail
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            // 성공 시 모달을 완전히 닫고 새로고침
+            if(reportModalInstance) reportModalInstance.hide();
+            location.reload();
+        }
+    })
+    .catch(err => {
+        console.error("신고 에러:", err);
+        alert("신고 처리 중 오류가 발생했습니다.");
+    });
+}
 </script>
 
 <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 20px; overflow: hidden;">
             <div class="modal-header text-white" style="background-color: #20828A; border: none;">
-                <h5 class="modal-title fw-bold"><i class="bi bi-alarm me-2"></i>게시글 신고하기</h5>
+                <h5 class="modal-title fw-bold" id="reportModalLabel"><i class="bi bi-alarm me-2"></i>게시글 신고하기</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <input type="hidden" id="report-type">
+                <input type="hidden" id="report-target-id">
+
                 <p class="text-muted small mb-3">신고 사유를 선택해주세요. 허위 신고 시 이용이 제한될 수 있습니다.</p>
                 <select id="report-reason-select" class="form-select mb-3 border-2" style="border-radius: 10px;">
                     <option value="부적절한 홍보 게시글">부적절한 홍보 게시글</option>
@@ -432,7 +613,7 @@
             </div>
             <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">
                 <button type="button" class="btn px-4 fw-bold" data-bs-dismiss="modal" style="color: #6c757d;">취소</button>
-                <button type="button" class="btn px-4 fw-bold text-white" style="background-color: #20828A; border-radius: 10px;" onclick="submitReport({{ board.id }})">신고 제출</button>
+                <button type="button" class="btn px-4 fw-bold text-white" style="background-color: #20828A; border-radius: 10px;" onclick="submitReport()">신고 제출</button>
             </div>
         </div>
     </div>

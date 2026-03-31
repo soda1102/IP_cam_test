@@ -50,6 +50,50 @@
     h1, h2, h3, p, span {
         font-family: 'Pretendard', sans-serif !important;
     }
+
+        /* --- [핵심 수정] 모바일 대응 및 좌우 스크롤 제거 --- */
+    @media (max-width: 991.98px) {
+        /* 1. 전체 페이지에서 좌우 스크롤 차단 */
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* 2. 컨테이너에 좌우 여백(Padding) 추가 */
+        .bg-section {
+            padding: 40px 15px; /* 좌우 15px 여백 생성 */
+        }
+
+        /* 3. 히어로 섹션 텍스트 및 간격 조정 */
+        .tip-hero {
+            padding: 40px 15px;
+            margin-bottom: 30px;
+            margin-left: 5px;  /* 살짝 안으로 들여쓰기 */
+            margin-right: 5px;
+        }
+        .tip-hero h1 {
+            font-size: 1.8rem !important; /* 너무 큰 글자가 화면 뚫고 나가는 것 방지 */
+            word-break: keep-all;
+        }
+        .tip-hero p {
+            font-size: 0.95rem;
+            padding: 0 10px;
+        }
+
+        /* 4. 포스터 컨테이너 조정 */
+        .poster-container { position: relative; top: 0; margin-bottom: 40px; }
+        .poster-box { height: auto; max-height: 450px; }
+
+        /* 5. 부트스트랩 row의 음수 마진으로 인한 스크롤 방지 */
+        .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .row > [class*="col-"] {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -79,13 +123,15 @@
     </div>
 
     <div class="row align-items-center flex-lg-row-reverse mb-5">
-        <div class="col-lg-6 mb-4 mb-lg-0">
+        <div class="col-lg-6 mb-4 mb-lg-0 text-lg-end">
             <h2 class="h3 mb-4 fw-bold">운전자의 시야 제한과 사고 위험</h2>
             <p class="lh-lg">
-                산간 도로의 특성상 급커브와 터널이 많아 운전자의 시야 확보가 제한적인 상황에서,<br> <span class="point-text">갑작스러운 야생 동물의 출현은 대형 사고의 직접적인 원인</span>이 됩니다.
+                산간 도로의 특성상 급커브와 터널이 많아 운전자의 시야 확보가 제한적인 상황에서,<br>
+                <span class="point-text">갑작스러운 야생 동물의 출현은 대형 사고의 직접적인 원인</span>이 됩니다.
             </p>
             <p class="lh-lg">
-                특히 야간이나 악천후 시에는 육안 식별이 더욱 어려워져, 동물의 생명뿐만 아니라 운전자의 급제동 및 <br>차선 이탈로 인한 연쇄 추돌 사고 등 치명적인 인명 피해로 이어지는 경우가 빈번합니다.
+                특히 야간이나 악천후 시에는 육안 식별이 더욱 어려워져, 동물의 생명뿐만 아니라 운전자의 급제동 및 <br>
+                차선 이탈로 인한 연쇄 추돌 사고 등 치명적인 인명 피해로 이어지는 경우가 빈번합니다.
             </p>
         </div>
         <div class="col-lg-6">

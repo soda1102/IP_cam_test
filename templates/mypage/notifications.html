@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}알림 내역 - {% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    .activity-body { background-color: #F8F9FA; padding: 50px 0 0 0; min-height: 80vh; }
+
+    /* 헤더 박스 통일 */
+    .activity-header-box {
+        max-width: 600px; margin: 0 auto 20px auto;
+        background-color: #008080; color: #FFFFFF;
+        border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        display: flex; justify-content: center; align-items: center; height: 55px;
+    }
+    .activity-header-box h2 { font-size: 20px; margin: 0 !important; line-height: 1; }
+
+    /* 카드 컨테이너 */
+    .activity-card-container {
+        max-width: 600px; margin: 0 auto;
+        border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        background-color: #FFFFFF; overflow: hidden;
+    }
+
+    /* 탭 스타일 통일 */
+    #activityTab.nav-tabs { border-bottom: 2px solid #f0f0f0; justify-content: center; }
+    #activityTab .nav-link { color: #333; font-weight: 600; border: none !important; padding: 15px 25px; }
+    #activityTab .nav-link.active { color: #008080 !important; background-color: transparent !important; border-bottom: 3px solid #008080 !important; }
+
+    #activityTabContent.tab-content { padding: 30px; min-height: 300px; }
+
+    /* 알림 아이템 스타일 */
+    .activity-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 15px; border-bottom: 1px solid #f1f1f1;
+        text-decoration: none; color: inherit; transition: background 0.2s;
+    }
+
+    .activity-item:hover { background-color: #f9f9f9; color: #008080; }
+    .activity-item.unread { background-color: #f0fafa; } /* 안 읽은 알림 */
+
+    .item-title { font-weight: 600; margin-bottom: 3px; }
+    .item-date { font-size: 12px; color: #999; }
+    .empty-msg { text-align: center; padding: 50px 0; color: #ccc; }
+
+    /* 하단 홈 링크 */
+    .home-back { text-align: center; margin-top: auto; margin-bottom: auto; padding: 30px 0; }
+    .home-back a { color: #888; text-decoration: none; font-size: 14px; }
+    .home-back a:hover { color: #008080; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-body">
+    <div class="container">
+        <div class="activity-header-box">
+            <h2>알림 내역</h2>
+        </div>
+
+        <div class="activity-card-container">
+            <ul class="nav nav-tabs" id="activityTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button">전체 알림</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button">활동 알림</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="social-tab" data-bs-toggle="tab" data-bs-target="#social" type="button">소셜 알림</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="etc-tab" data-bs-toggle="tab" data-bs-target="#etc" type="button">공지 · 기타</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="activityTabContent">
+                <div class="tab-pane fade show active" id="all">
+                    {% if all_notifs %}
+                        {% for n in all_notifs %}
+                        <a href="{{ url_for('mypage.notification_read', notif_id=n.id) }}" class="activity-item {{ 'unread' if not n.is_read }}">
+                            <div>
+                                <div class="item-title">
+                                    <i class="bi {{ 'bi-chat-dots text-primary' if n.type == 'comment' else 'bi-heart-fill text-danger' if n.type == 'like' else 'bi-person-plus-fill text-success' if n.type == 'follow' else 'bi-megaphone text-warning' }} me-2"></i>
+                                    {{ n.message }}
+                                </div>
+                                <div class="item-date">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br>새로운 알림이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="activity">
+                    {% if activity_notifs %}
+                        {% for n in activity_notifs %}
+                        <a href="{{ url_for('mypage.notification_read', notif_id=n.id) }}" class="activity-item {{ 'unread' if not n.is_read }}">
+                            <div>
+                                <div class="item-title">{{ n.message }}</div>
+                                <div class="item-date">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br>활동 알림이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="social">
+                    {% if social_notifs %}
+                        {% for n in social_notifs %}
+                        <a href="{{ url_for('mypage.notification_read', notif_id=n.id) }}" class="activity-item {{ 'unread' if not n.is_read }}">
+                            <div>
+                                <div class="item-title">{{ n.message }}</div>
+                                <div class="item-date">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br>소셜 알림이 없습니다.</div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="etc">
+                    {% if etc_notifs %}
+                        {% for n in etc_notifs %}
+                        <a href="{{ url_for('mypage.notification_read', notif_id=n.id) }}" class="activity-item {{ 'unread' if not n.is_read }}">
+                            <div>
+                                <div class="item-title">{{ n.message }}</div>
+                                <div class="item-date">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br>공지 또는 기타 알림이 없습니다.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="home-back">
+            <a href="/">홈으로 돌아가기</a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const hash = window.location.hash;
+    if (hash) {
+        const targetTab = document.querySelector(`button[data-bs-target="${hash}"]`);
+        if (targetTab) {
+            const tab = new bootstrap.Tab(targetTab);
+            tab.show();
+        }
+    }
+
+    const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function (event) {
+            const targetId = event.target.getAttribute('data-bs-target');
+            history.replaceState(null, null, targetId);
+        });
+    });
+});
+</script>
+{% endblock %}

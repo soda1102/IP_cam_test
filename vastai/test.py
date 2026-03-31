@@ -10,68 +10,72 @@ import os
 
 # ===================== 경로 설정 =====================
 MODEL_PATH = "best.pt"
-VIDEO_PATH = "boar_1.mp4"
-OUTPUT_PATH = "boar_result_1.mp4"
-# ====================================================
-
-# 신뢰도 임계값 (0~1, 낮출수록 더 많이 검출)
+# 사진(.jpg, .png) 또는 영상(.mp4, .avi) 경로를 자유롭게 넣으세요
+INPUT_PATH = "water_deer_test.jpg"  # <-- 여기에 파일명만 바꾸면 됨
 CONFIDENCE = 0.25
 
 
+# ====================================================
+
 def run_detection():
-    # 모델 로드
-    print(f"[1/3] 모델 로드 중: {MODEL_PATH}")
+    # 1. 파일 존재 확인
+    if not os.path.exists(INPUT_PATH):
+        print(f"[오류] 파일을 찾을 수 없습니다: {INPUT_PATH}")
+        return
+
+    # 2. 모델 로드
+    print(f"[1/2] 모델 로드 중: {MODEL_PATH}")
     model = YOLO(MODEL_PATH)
-    print(f"      클래스 목록: {model.names}")
 
-    # 영상 정보 확인
-    cap = cv2.VideoCapture(VIDEO_PATH)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    cap.release()
+    # 3. 입력 파일 종류 확인 (사진인지 영상인지)
+    is_image = INPUT_PATH.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))
+    print(f"      탐지 대상: {'[사진]' if is_image else '[영상]'}")
 
-    print(f"[2/3] 영상 정보: {w}x{h}, {fps:.1f}fps, 총 {total_frames}프레임")
+    # 4. Detection 실행
+    print(f"[2/2] Detection 시작 (conf={CONFIDENCE}) ...")
 
-    # Detection 실행
-    print(f"[3/3] Detection 시작 (conf={CONFIDENCE}) ...")
+    # 영상이면 stream=True로 메모리 절약, 사진이면 일반 리스트로 받음
     results = model.predict(
-        source=VIDEO_PATH,
-        save=True,              # 결과 영상 저장
+        source=INPUT_PATH,
+        save=True,
         conf=CONFIDENCE,
         project="vastai",
-        name="result",
+        name="test_result",
         exist_ok=True,
-        stream=True,            # 메모리 절약
-        verbose=False,
+        stream=not is_image,  # 영상일 때만 스트리밍 모드
+        verbose=False
     )
 
-    # 프레임별 통계
-    total_detections = 0
-    frame_idx = 0
+    # 5. 결과 출력 (사진/영상 별도 처리)
+    if is_image:
+        # 사진은 결과가 딱 하나임
+        result = list(results)[0]
+        print("\n========== [사진 결과] ==========")
+        print(f"검출된 객체 수: {len(result.boxes)}개")
+        for box in result.boxes:
+            cls = int(box.cls[0])
+            conf = float(box.conf[0])
+            print(f" - {model.names[cls]}: {conf:.2%}")
+    else:
+        # 영상은 루프 돌면서 요약
+        total_detections = 0
+        frame_idx = 0
+        for r in results:
+            total_detections += len(r.boxes)
+            frame_idx += 1
+            if frame_idx % 30 == 0:
+                print(f"   프레임 {frame_idx} 처리 중...")
 
-    for result in results:
-        n = len(result.boxes) if result.boxes else 0
-        total_detections += n
-        frame_idx += 1
-        if frame_idx % 30 == 0:
-            print(f"   프레임 {frame_idx}/{total_frames} | 이번 프레임 검출: {n}개")
+        print("\n========== [영상 요약] ==========")
+        print(f"총 처리 프레임 : {frame_idx}")
+        print(f"총 검출 횟수   : {total_detections}")
 
-    print("\n========== 결과 요약 ==========")
-    print(f"총 처리 프레임 : {frame_idx}")
-    print(f"총 검출 횟수   : {total_detections}")
-    print(f"프레임당 평균  : {total_detections / max(frame_idx, 1):.2f}개")
-    print(f"결과 저장 위치 : vastai/result/")
+    print(f"결과 저장 위치 : vastai/test_result/")
     print("================================\n")
 
 
 if __name__ == "__main__":
-    # 파일 존재 확인
-    for path in [MODEL_PATH, VIDEO_PATH]:
-        if not os.path.exists(path):
-            print(f"[오류] 파일을 찾을 수 없습니다: {path}")
-            print("       스크립트와 같은 위치에서 실행했는지 확인하세요.")
-            exit(1)
-
-    run_detection()
+    if not os.path.exists(MODEL_PATH):
+        print(f"[오류] 모델 파일을 찾을 수 없습니다: {MODEL_PATH}")
+    else:
+        run_detection()

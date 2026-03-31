@@ -4,10 +4,11 @@
 
 {% block style %}
 <style>
+    /* 기본 레이아웃 유지 */
     .bg-section { padding: 80px 0; }
     .point-text { color: #20828A; font-weight: 700; }
 
-    /* 1. 상단 헤더 영역 (FAQ와 통일감) */
+    /* 1. 상단 헤더 영역 */
     .tip-hero {
         background: linear-gradient(135deg, #20828A 0%, #165e63 100%);
         padding: 60px 0;
@@ -16,14 +17,14 @@
         margin-bottom: 50px;
     }
 
-    /* 2. 포스터 이미지 바운드 박스 */
+    /* 2. 포스터 이미지 박스 */
     .poster-container {
         position: sticky;
-        top: 20px; /* 스크롤 시 포스터가 따라오도록 설정 */
+        top: 20px;
     }
     .poster-box {
         width: 100%;
-        aspect-ratio: 1 / 1.414; /* A4 용지 비율 */
+        aspect-ratio: 1 / 1.414;
         background-color: #ffffff;
         border-radius: 15px;
         display: flex;
@@ -44,7 +45,7 @@
         object-fit: contain;
     }
 
-    /* 3. 팁 아코디언(토글) 스타일 커스텀 */
+    /* 3. 아코디언 스타일 */
     .tips-accordion .accordion-item {
         border: none;
         margin-bottom: 15px;
@@ -74,6 +75,50 @@
     .tips-accordion ul { padding-left: 1.2rem; margin-bottom: 0; }
     .tips-accordion li { margin-bottom: 15px; color: #555; }
     .tips-accordion li strong { color: #333; display: block; margin-bottom: 4px; }
+
+    /* --- [핵심 수정] 모바일 대응 및 좌우 스크롤 제거 --- */
+    @media (max-width: 991.98px) {
+        /* 1. 전체 페이지에서 좌우 스크롤 차단 */
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* 2. 컨테이너에 좌우 여백(Padding) 추가 */
+        .bg-section {
+            padding: 40px 15px; /* 좌우 15px 여백 생성 */
+        }
+
+        /* 3. 히어로 섹션 텍스트 및 간격 조정 */
+        .tip-hero {
+            padding: 40px 15px;
+            margin-bottom: 30px;
+            margin-left: 5px;  /* 살짝 안으로 들여쓰기 */
+            margin-right: 5px;
+        }
+        .tip-hero h1 {
+            font-size: 1.8rem !important; /* 너무 큰 글자가 화면 뚫고 나가는 것 방지 */
+            word-break: keep-all;
+        }
+        .tip-hero p {
+            font-size: 0.95rem;
+            padding: 0 10px;
+        }
+
+        /* 4. 포스터 컨테이너 조정 */
+        .poster-container { position: relative; top: 0; margin-bottom: 40px; }
+        .poster-box { height: auto; max-height: 450px; }
+
+        /* 5. 부트스트랩 row의 음수 마진으로 인한 스크롤 방지 */
+        .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .row > [class*="col-"] {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -84,8 +129,8 @@
         <p class="lead mb-0" style="opacity: 0.9;">베테랑 운전자도 놓치기 쉬운 상황별 안전 수칙을 확인하세요.</p>
     </div>
 
-    <div class="row g-5">
-        <div class="col-lg-5 poster-container">
+    <div class="row g-4 g-lg-5">
+        <div class="col-12 col-lg-5 poster-container">
             <h3 class="h5 fw-bold mb-3"><i class="bi bi-image me-2"></i>안전 수칙 포스터</h3>
             <div class="poster-box shadow-sm" onclick="window.open('/static/img/poster.png', '_blank')">
                 <img src="/static/img/poster.png" alt="운전자 안전 수칙 포스터">
@@ -95,10 +140,10 @@
             </p>
         </div>
 
-        <div class="col-lg-7">
+        <div class="col-12 col-lg-7">
             <h3 class="h5 fw-bold mb-3"><i class="bi bi-list-check me-2"></i>상황별 운전 tip</h3>
             <div class="accordion accordion-flush tips-accordion" id="drivingTips">
-                
+
                 <div class="accordion-item">
                     <h2 class="accordion-header">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#tip1">
@@ -150,5 +195,8 @@
                     </div>
                 </div>
 
-            </div> </div> </div> </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

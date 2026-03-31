@@ -104,6 +104,50 @@
         display: inline-block;
         margin-bottom: 10px;
     }
+
+        /* --- [핵심 수정] 모바일 대응 및 좌우 스크롤 제거 --- */
+    @media (max-width: 991.98px) {
+        /* 1. 전체 페이지에서 좌우 스크롤 차단 */
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* 2. 컨테이너에 좌우 여백(Padding) 추가 */
+        .bg-section {
+            padding: 40px 15px; /* 좌우 15px 여백 생성 */
+        }
+
+        /* 3. 히어로 섹션 텍스트 및 간격 조정 */
+        .tip-hero {
+            padding: 40px 15px;
+            margin-bottom: 30px;
+            margin-left: 5px;  /* 살짝 안으로 들여쓰기 */
+            margin-right: 5px;
+        }
+        .tip-hero h1 {
+            font-size: 1.8rem !important; /* 너무 큰 글자가 화면 뚫고 나가는 것 방지 */
+            word-break: keep-all;
+        }
+        .tip-hero p {
+            font-size: 0.95rem;
+            padding: 0 10px;
+        }
+
+        /* 4. 포스터 컨테이너 조정 */
+        .poster-container { position: relative; top: 0; margin-bottom: 40px; }
+        .poster-box { height: auto; max-height: 450px; }
+
+        /* 5. 부트스트랩 row의 음수 마진으로 인한 스크롤 방지 */
+        .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .row > [class*="col-"] {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+    }
 </style>
 {% endblock %}
 

@@ -1,7 +1,7 @@
 from flask import (
     Blueprint,
     request, session, flash,
-    render_template, redirect, url_for
+    render_template, redirect, url_for,
 )
 
 from src.common import (
@@ -15,6 +15,9 @@ from src.common import fetch_query, execute_query, log_system, login_required
 from src.common.storage import upload_file
 from src.domain import Member
 import math
+from flask import Blueprint, request, session, render_template, redirect, url_for
+# 모델 임포트 경로가 정확해야 합니다.
+from src.common import fetch_query, login_required
 
 mypage_bp = Blueprint('mypage', __name__)
 
@@ -54,7 +57,6 @@ def mypage():
 
     board_count = count_data['total_cnt'] if count_data else 0
     reported_count = count_data['reported_cnt'] if count_data else 0
-
     # 3. render_template 시 user 객체를 통째로 넘기면 user.profile_img를 HTML에서 쓸 수 있습니다.
     return render_template('mypage/info.html',
                            user=user,
@@ -69,10 +71,13 @@ def member_edit():
         user = fetch_query("SELECT * FROM members WHERE id = %s", (session['user_id'],), one=True)
         return render_template('mypage/edit.html', user=user)
 
-    # POST 요청 (정보 수정)
+    # 1. 폼 데이터 가져오기
     new_name = request.form.get('name')
     new_nickname = request.form.get('nickname')
     new_pw = request.form.get('password')
+    b_year = request.form.get('birth_year')
+    b_month = request.form.get('birth_month')
+    b_day = request.form.get('birth_day')
 
     try:
         set_clauses = []
@@ -90,18 +95,28 @@ def member_edit():
             set_clauses.append("password = %s")
             params.append(new_pw)
 
-        if set_clauses:  # 변경할 항목이 하나라도 있을 때만 실행
+        # 2. 생년월일 처리 로직
+        if b_year and b_month and b_day:
+
+            full_birthday = f"{b_year}-{b_month.zfill(2)}-{b_day.zfill(2)}"
+            set_clauses.append("birthdate = %s")
+            params.append(full_birthday)
+
+        if set_clauses:
+
             params.append(session['user_id'])
             sql = f"UPDATE members SET {', '.join(set_clauses)} WHERE id = %s"
             execute_query(sql, tuple(params))
 
+        # 3. 세션 갱신 (선택사항)
         session['user_name'] = new_name
         session['user_nickname'] = new_nickname
+
         return "<script>alert('수정 완료');location.href='/mypage';</script>"
 
     except Exception as e:
         print(f"수정 에러: {e}")
-        return "수정 중 오류 발생"
+        return "<script>alert('수정 중 오류 발생');history.back();</script>"
 
 # 프로필
 @mypage_bp.route('/profile/upload', methods=['POST'])
@@ -158,6 +173,7 @@ def profile_delete():
 @mypage_bp.route('/my_activity/')
 @login_required
 def my_activity():
+
     # 1. 로그인 확인 및 사용자 ID 가져오기
     user_id = session.get('user_id')
     if not user_id:
@@ -173,7 +189,7 @@ def my_activity():
     total_count = total_row['cnt']
     total_pages = math.ceil(total_count / per_page)
 
-    # 4. 실제 데이터 가져오기 (LIMIT와 OFFSET으로 페이지 자르기)
+    # 4 - 1. 작성한 게시물
     my_posts = fetch_query("""
         SELECT * FROM boards 
         WHERE member_id = %s AND active = 1 
@@ -181,7 +197,7 @@ def my_activity():
         LIMIT %s OFFSET %s
     """, (user_id, per_page, offset))
 
-    # 좋아요와 스크랩 데이터
+    # 4 - 2. 좋아요
     my_likes = fetch_query("""
         SELECT b.*, m.name as writer_name 
         FROM board_likes bl
@@ -190,12 +206,39 @@ def my_activity():
         WHERE bl.member_id = %s
     """, (user_id,))
 
+    # 4 - 3. 스크랩
     my_scraps = fetch_query("""
         SELECT b.*, bs.created_at as scrap_date 
         FROM board_scrap bs
         JOIN boards b ON bs.board_id = b.id
         WHERE bs.member_id = %s
     """, (user_id,))
+
+    # 4 - 4. 작성한 댓글
+    my_comments = fetch_query("""
+            SELECT c.*, b.title as board_title 
+            FROM board_comments c
+            JOIN boards b ON c.board_id = b.id
+            WHERE c.member_id = %s
+            ORDER BY c.created_at DESC
+        """, (user_id,))
+
+    # 4 - 5. 휴지통
+    my_trash = fetch_query("""
+        SELECT *, DATEDIFF(DATE_ADD(deleted_at, INTERVAL 30 DAY), NOW()) as remaining_days
+        FROM boards 
+        WHERE member_id = %s AND active = 0 AND deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+    """, (user_id,))
+
+    # 4 - 6. 차단 목록
+    my_blocks = fetch_query("""
+            SELECT b.*, m.name as blocked_name 
+            FROM blocks b
+            JOIN members m ON b.blocked_id = m.id
+            WHERE b.blocker_id = %s
+            ORDER BY b.created_at DESC
+        """, (user_id,))
 
     # 5. HTML이 기다리고 있는 pagination 객체 만들기
     pagination_obj = {
@@ -207,11 +250,14 @@ def my_activity():
         'next_num': page + 1
     }
 
-    # 6. 모든 데이터를 담아서 렌더링
+    # 6. 템플릿으로 데이터 전송
     return render_template('mypage/my_activity.html',
                            my_posts=my_posts,
                            my_likes=my_likes,
                            my_scraps=my_scraps,
+                           my_comments=my_comments,
+                           my_trash=my_trash,  
+                           my_blocks=my_blocks,
                            pagination=pagination_obj)
 
 # 회원 탈퇴
@@ -241,3 +287,87 @@ def delete_account():
 
     except Exception as e:
         return f"<script>alert('탈퇴 처리 중 오류가 발생했습니다: {str(e)}'); history.back();</script>"
+
+# 차단 해제
+@mypage_bp.route('/my_activity/unblock/<int:blocked_id>')
+@login_required
+def unblock_user(blocked_id):
+    user_id = session.get('user_id')
+
+    # 1. DB 삭제 (테이블명이 blocks인지 user_blocks인지 꼭 확인!)
+    query = "DELETE FROM blocks WHERE blocker_id = %s AND blocked_id = %s"
+    execute_query(query, (user_id, blocked_id))
+
+    # 2. 올바른 리다이렉트 방법 (블루프린트명.함수명)
+    return redirect(url_for('mypage.my_activity') + '#blocks')
+
+# AI 분석 결과
+@mypage_bp.route('/ai_results')
+@login_required
+def ai_results():
+
+    # 2. 페이지네이션 설정
+    page = request.args.get('page', type=int, default=1)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    user_id = session.get('user_id')
+
+    try:
+        # 3. 전체 데이터 개수 조회 (SQL 직접 사용)
+        count_sql = "SELECT COUNT(*) as cnt FROM ai_analysis WHERE user_id = %s"
+        total_row = fetch_query(count_sql, (user_id,), one=True)
+        total_count = total_row['cnt'] if total_row else 0
+        total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
+
+
+        # 4. 분석 결과 목록 조회
+        list_sql = """
+            SELECT id, filename, boar_count, water_deer_count, racoon_count, created_at 
+            FROM ai_analysis 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC 
+            LIMIT %s OFFSET %s
+        """
+        items = fetch_query(list_sql, (user_id, per_page, offset))
+
+        # 5. html의 pagination 객체 구조에 맞춰 데이터 구성
+        pagination_obj = {
+            'records': items if items else [],  # 'items'를 'records'로 변경
+            'page': page,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_num': page - 1,
+            'next_num': page + 1,
+            'page_range': list(range(1, total_pages + 1))
+        }
+
+        return render_template('mypage/ai_model.html', pagination=pagination_obj)
+
+    except Exception as e:
+        print(f"ai_results 조회 에러: {e}")
+        return f"<script>alert('데이터 조회 중 오류가 발생했습니다.'); history.back();</script>", 500
+
+# AI 분석 결과 다운로드
+@mypage_bp.route('/download-report/<int:analysis_id>') # 주소 수정
+@login_required
+def download_ai_report(analysis_id):
+
+    analysis = AIAnalysis.query.get_or_404(analysis_id)
+
+    # 메모장에 기록할 내용 작성
+    report_content = f"""[AI 동물 분석 리포트]
+분석 파일명: {analysis.filename}
+분석 일시: {analysis.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+---------------------------------
+- 멧돼지 탐지: {analysis.boar_count}건
+- 고라니 탐지: {analysis.water_deer_count}건
+- 너구리 탐지: {analysis.racoon_count}건
+---------------------------------
+도(道)와주세요 - 로드킬 예방 시스템"""
+
+    response = make_response(report_content)
+    response.headers["Content-Disposition"] = f"attachment; filename=report_{analysis_id}.txt"
+    response.headers["Content-Type"] = "text/plain"
+    return response

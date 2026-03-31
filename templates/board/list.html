@@ -94,22 +94,36 @@
     .table tr.pinned-row:hover {
         background-color: rgba(184, 229, 224, 0.8) !important;
     }
+
+    /* 댓글 색상 지정 */
+    .text-custom-teal {
+    color: #20828a !important;
+    font-weight: 600; /* 숫자를 조금 더 선명하게 보이게 함 */
+    }
 </style>
 
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-end mb-4 px-2">
         <div>
-            <h2 class="fw-bold mb-1">도(道)란도란</h2>
-            <p class="text-muted mb-0">도로 위 안전 정보를 공유하고 베테랑들과 소통하세요.</p>
+            <h2 class="fw-bold mb-1">
+                {% if category == 'info' %} 정보 게시판
+                {% elif category == 'qna' %} Q&A 게시판
+                {% else %} 자유 게시판 {% endif %}
+            </h2>
+            <p class="text-muted mb-0">
+                {% if category == 'info' %} 유용한 정보를 공유하는 공간입니다.
+                {% elif category == 'qna' %} 궁금한 점을 묻고 답하는 공간입니다.
+                {% else %} 자유롭게 소통하는 공간입니다. {% endif %}
+            </p>
         </div>
-        <a href="{{ url_for('board.board_write') }}" class="btn text-white px-4 py-2 rounded-pill shadow-sm" style="background-color: var(--primary-teal);">
+        <a href="{{ url_for('board.board_write', category=category) }}" class="btn text-white px-4 py-2 rounded-pill shadow-sm" style="background-color: var(--primary-teal);">
             <i class="bi bi-pencil-square me-1"></i> 새 글 쓰기
         </a>
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-3 px-2">
         <select class="form-select form-select-sm border-0 shadow-sm" style="border-radius: 10px; width: 130px; height: 38px;"
-                onchange="location.href='{{ url_for('board.board_list', sort=sort, search=search, search_type=search_type, show_pinned=show_pinned) }}&per_page=' + this.value">
+                onchange="location.href='{{ url_for('board.board_list', category=category, sort=sort, search=search, search_type=search_type, show_pinned=show_pinned) }}&per_page=' + this.value">
             <option value="10" {% if per_page == 10 %}selected{% endif %}>10개씩 보기</option>
             <option value="20" {% if per_page == 20 %}selected{% endif %}>20개씩 보기</option>
             <option value="50" {% if per_page == 50 %}selected{% endif %}>50개씩 보기</option>
@@ -118,11 +132,12 @@
         <div class="board-controls">
             <div class="form-check mb-0 me-2">
                 <input class="form-check-input" type="checkbox" id="pinCheck" {% if show_pinned == 'on' %}checked{% endif %}
-                       onchange="location.href='{{ url_for('board.board_list', sort=sort, search=search, search_type=search_type, per_page=per_page) }}&show_pinned=' + (this.checked ? 'on' : 'off')">
+                       onchange="location.href='{{ url_for('board.board_list', category=category, sort=sort, search=search, search_type=search_type, per_page=per_page) }}&show_pinned=' + (this.checked ? 'on' : 'off')">
                 <label class="form-check-label small text-muted" for="pinCheck" style="cursor:pointer;">공지 포함</label>
             </div>
 
             <form action="{{ url_for('board.board_list') }}" method="GET" class="search-container">
+                <input type="hidden" name="category" value="{{ category }}">
                 <input type="hidden" name="per_page" value="{{ per_page }}">
                 <input type="hidden" name="show_pinned" value="{{ show_pinned }}">
                 <select name="search_type" class="search-type-select">
@@ -138,8 +153,8 @@
                     {% if sort == 'popular' %}인기순{% else %}최신순{% endif %}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item small" href="{{ url_for('board.board_list', sort='latest', search=search, search_type=search_type, per_page=per_page, show_pinned=show_pinned) }}">최신순</a></li>
-                    <li><a class="dropdown-item small" href="{{ url_for('board.board_list', sort='popular', search=search, search_type=search_type, per_page=per_page, show_pinned=show_pinned) }}">인기순</a></li>
+                    <li><a class="dropdown-item small" href="{{ url_for('board.board_list', category=category, sort='latest', search=search, search_type=search_type, per_page=per_page, show_pinned=show_pinned) }}">최신순</a></li>
+                    <li><a class="dropdown-item small" href="{{ url_for('board.board_list', category=category, sort='popular', search=search, search_type=search_type, per_page=per_page, show_pinned=show_pinned) }}">인기순</a></li>
                 </ul>
             </div>
         </div>
@@ -154,7 +169,7 @@
                         <th style="width: 15%;">작성자</th>
                         <th style="width: 10%;">작성일</th>
                         <th style="width: 10%;">좋아요</th>
-                        <th style="width: 10%;">댓글수</th>
+                        <th style="width: 10%;">조회수</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -169,7 +184,6 @@
                                     <span class="badge bg-danger me-2" style="font-size: 0.7rem;">공지</span>
                                 {% endif %}
 
-                                {# 관리자에게만 숨김 뱃지 표시 #}
                                 {% if session.get('user_role') == 'admin' and board.active == 0 %}
                                     <span class="badge bg-secondary me-2" style="font-size: 0.7rem;">숨김</span>
                                 {% endif %}
@@ -184,16 +198,18 @@
                                     <span class="ms-1 text-muted" title="첨부파일 있음">
                                         <i class="bi bi-paperclip" style="transform: rotate(45deg); display: inline-block;"></i>
                                     </span>
-                                {% endif %}
+                                    {% endif %}
+
+                                    {% if board.comment_count > 0 %}
+                                        <span class="ms-1 small text-custom-teal">[{{ board.comment_count }}]</span>
+                                    {% endif %}
                                 </span>
                             </div>
                         </td>
-                        <td class="small {% if board.active == 0 %}text-muted{% endif %}">{{ board.writer_nickname if board.writer_nickname else board.writer_name }}</td>
+                        <td class="small">{{ board.writer_nickname if board.writer_nickname else board.writer_name }}</td>
                         <td class="text-muted small">{{ board.created_at.strftime('%Y-%m-%d') if board.created_at }}</td>
                         <td style="color: #e03131; font-size: 0.9rem;">❤️ {{ board.like_count or 0 }}</td>
-                        <td style="color: var(--primary-teal); font-size: 0.9rem;">
-                            💬 {{ board.comment_count or 0 }}
-                        </td>
+                        <td style="color: var(--primary-teal); font-size: 0.9rem;">{{ board.visits or 0 }}</td>
                     </tr>
                     {% endfor %}
                     {% if not boards %}
@@ -206,15 +222,15 @@
         <nav class="mt-5">
             <ul class="pagination justify-content-center">
                 {% if pagination.has_prev %}
-                <li class="page-item"><a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('board.board_list', page=pagination.prev_num, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned) }}">&laquo;</a></li>
+                <li class="page-item"><a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('board.board_list', category=category, page=pagination.prev_num, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned) }}">&laquo;</a></li>
                 {% endif %}
                 {% for p in range(1, pagination.total_pages + 1) %}
                 <li class="page-item {{ 'active' if p == pagination.page }}">
-                    <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('board.board_list', page=p, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned) }}">{{ p }}</a>
+                    <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('board.board_list', category=category, page=p, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned) }}">{{ p }}</a>
                 </li>
                 {% endfor %}
                 {% if pagination.has_next %}
-                <li class="page-item"><a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('board.board_list', page=pagination.next_num, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned) }}">&raquo;</a></li>
+                <li class="page-item"><a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('board.board_list', category=category, page=pagination.next_num, search=search, search_type=search_type, sort=sort, per_page=per_page, show_pinned=show_pinned) }}">&raquo;</a></li>
                 {% endif %}
             </ul>
         </nav>

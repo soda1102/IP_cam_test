@@ -19,3 +19,8 @@ def get_features_data():
 def get_logo_data():
     # 여기서 필요한 데이터 처리를 할 수 있습니다.
     return render_template('intro/logo.html')
+
+@introduce_bp.route('/process', methods=['GET', 'POST'])
+def get_process_data():
+    # 여기서 필요한 데이터 처리를 할 수 있습니다.
+    return render_template('intro/process.html')

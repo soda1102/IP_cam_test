@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}AI 분석 결과 - {% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    .activity-body { background-color: #F8F9FA; padding: 50px 0; min-height: 60vh; }
+    .activity-header-box {
+        max-width: 900px; margin: 0 auto 20px auto; background-color: #008080;
+        color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        display: flex; justify-content: center; align-items: center; height: 55px;
+    }
+
+    .activity-header-box h2 { font-size: 20px; margin: 0; }
+    .activity-card-container {
+        max-width: 900px; margin: 0 auto; border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08); background-color: #FFFFFF;
+        overflow: hidden; padding: 20px 0; height: 462px;
+    }
+
+    .activity-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 20px 30px; border-bottom: 1px solid #f1f1f1; transition: background 0.2s;
+    }
+
+    .activity-item:hover { background-color: #f9f9f9; }
+    .item-title { font-weight: 600; margin-bottom: 5px; font-size: 16px; }
+    .item-date { font-size: 13px; color: #999; margin-bottom: 8px; }
+    .result-badge-group { display: flex; gap: 8px; }
+    .badge-ai {
+        font-size: 11px; padding: 4px 10px; border-radius: 50px;
+        background-color: #f8f9fa; border: 1px solid #eee; color: #555;
+    }
+
+    .download-btn {
+        color: #008080; border: 1px solid #008080; padding: 6px 15px;
+        border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none;
+        transition: 0.3s;
+    }
+
+    .download-btn:hover { background-color: #008080; color: #fff; }
+    .empty-msg { text-align: center; padding: 80px 0; color: #ccc; }
+    .home-back { text-align: center; padding: 40px 0 20px 0; }
+    .home-back a { color: #888; text-decoration: none; font-size: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-body">
+    <div class="container">
+        <div class="activity-header-box">
+            <h2>AI 분석 결과</h2>
+        </div>
+
+        <div class="activity-card-container">
+            <div class="ai-result-list">
+                {# 1. 여기서 pagination.items를 pagination.records로 변경 #}
+                {% if pagination.records %}
+                    {# 2. 여기서 pagination.items를 pagination.records로 변경 #}
+                    {% for item in pagination.records %}
+                    <div class="activity-item">
+                        <div>
+                            <div class="item-title text-dark">{{ item['filename'] }}</div>
+                            <div class="item-date">{{ item['created_at'] }}</div>
+                            <div class="result-badge-group">
+                                <span class="badge-ai">멧돼지: {{ item['boar_count'] }}</span>
+                                <span class="badge-ai">고라니: {{ item['water_deer_count'] }}</span>
+                                <span class="badge-ai">너구리: {{ item['racoon_count'] }}</span>
+                            </div>
+                        </div>
+                        <a href="#" class="download-btn">
+                            <i class="bi bi-download me-1"></i> 리포트
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-msg">
+                        <i style="font-size: 3rem; display: block; margin-bottom: 85px;"></i>
+                        <br>분석 내역이 존재하지 않습니다.
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if pagination.total_pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('mypage.ai_results', page=pagination.prev_num) }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+
+                    {% for p in pagination.page_range %}
+                        <li class="page-item {{ 'active' if p == pagination.page }}">
+                            <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('mypage.ai_results', page=p) }}">{{ p }}</a>
+                        </li>
+                    {% endfor %}
+
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link border-0 shadow-sm mx-1" href="{{ url_for('mypage.ai_results', page=pagination.next_num) }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <div class="home-back">
+            <a href="/"><br>홈으로 돌아가기</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

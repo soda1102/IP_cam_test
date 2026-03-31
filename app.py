@@ -3,6 +3,10 @@ load_dotenv()
 
 # 기본 모듈
 import os
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # 라이브러리
 from flask_caching import Cache
@@ -22,7 +26,8 @@ from src.service import (
     admin_bp,
     faq_bp,
     tip_bp,
-    model_bp
+    model_bp,
+    profile_bp
     # 여기 아래에 계속 추가하기
 )
 # FIXME end
@@ -33,7 +38,6 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY')
 # 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
-
 
 # Cache 설정
 cache = Cache(config={'CACHE_TYPE': 'simple'})
@@ -61,6 +65,7 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(faq_bp, url_prefix='/faq')
 app.register_blueprint(tip_bp, url_prefix='/tip')
 app.register_blueprint(model_bp, url_prefix='/model')
+app.register_blueprint(profile_bp, url_prefix='/profile')
 # FIXME end
 
 
