@@ -75,7 +75,7 @@
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">권한</span>
-                        <span class="detail-value">{{ '관리자' if user.is_admin() else '일반 사용자' }}</span>
+                        <span class="detail-value">{% if user.role == 'admin' %}관리자{% elif user.role == 'manager' %}매니저{% else %}일반 사용자{% endif %}</span>
                     </div>
                     <br>
                     <a href="/mypage/edit" class="edit-btn">회원 정보 수정</a>

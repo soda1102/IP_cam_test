@@ -39,8 +39,8 @@ class Member:
             birth_day = row.get('birthdate'),
         )
 
-    def is_admin(self):   # role이 admin 인지 확인하는 메서드
-        return self.role == "admin"
+    def is_admin(self):   # role이 admin, manager 인지 확인하는 메서드
+        return self.role in ('admin', 'manager')
 
     def __str__(self): # member객체를 문자열로 출력할 때 사용(테스트용)
         return f"{self.name}({self.uid}:{self.pw}) [{self.role} ]{self.birth_day}"
