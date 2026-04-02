@@ -257,7 +257,7 @@ def board_view(board_id):
         if viewer_id:
             # 로그인한 경우: 내가 차단한 유저인지(is_blocked) 확인하는 서브쿼리 추가
             comment_sql = """
-                SELECT c.id, c.board_id, c.member_id, c.parent_id, c.active, c.created_at,
+                SELECT c.id, c.board_id, c.member_id, c.parent_id, c.active, c.created_at, c.deleted_at,
                        CASE WHEN c.active = 0 THEN '삭제된 댓글입니다.' ELSE c.content END AS content,
                        m.name as writer_name, m.nickname as writer_nickname, m.uid as writer_uid,
                        (SELECT COUNT(*) FROM blocks WHERE blocker_id = %s AND blocked_id = c.member_id) as is_blocked
@@ -270,7 +270,7 @@ def board_view(board_id):
         else:
             # 비로그인 경우: 차단 여부를 확인할 필요가 없으므로 무조건 0으로 설정
             comment_sql = """
-                SELECT c.id, c.board_id, c.member_id, c.parent_id, c.active, c.created_at,
+                SELECT c.id, c.board_id, c.member_id, c.parent_id, c.active, c.created_at, c.deleted_at,
                        CASE WHEN c.active = 0 THEN '삭제된 댓글입니다.' ELSE c.content END AS content,
                        m.name as writer_name, m.nickname as writer_nickname, m.uid as writer_uid,
                        0 as is_blocked
@@ -537,8 +537,8 @@ def delete_comment(comment_id):
     if not comment or comment['member_id'] != session['user_id']:
         return jsonify({'success': False, 'message': '삭제 권한이 없습니다.'})
 
-    # content 덮어쓰기 대신 active = 0 으로만 변경
-    delete_sql = "UPDATE board_comments SET active = 0 WHERE id = %s"
+    # active = 0 으로 변경 + 삭제일 기록
+    delete_sql = "UPDATE board_comments SET active = 0, deleted_at = NOW() WHERE id = %s"
 
     try:
         execute_query(delete_sql, (comment_id,))
