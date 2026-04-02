@@ -48,6 +48,7 @@ def dashboard():
             week_counts[6 - diff] += 1
 
     ctx = _sidebar_context(members, boards)
+    ai_stats = AdminService.get_ai_analysis_total()
     ctx.update({
         'active_nav':    'dashboard',
         'total_members': len(members),
@@ -55,6 +56,8 @@ def dashboard():
         'new_members':   AdminService.get_today_new_members(members),
         'new_boards':    AdminService.get_today_new_boards(boards),
         'report_count':  sum(b['report_count'] for b in boards),
+        'ai_total': ai_stats['total'],
+        'ai_today': ai_stats['today'],
         'week_counts':   week_counts,
         'today':         today,
     })
@@ -165,11 +168,39 @@ def posts():
 @admin_bp.route('/files')
 @admin_required
 def files():
-    members = AdminService.get_members()
-    boards  = AdminService.get_boards()
-    ctx = _sidebar_context(members, boards)
-    ctx['active_nav'] = 'files'
+    members = AdminService.get_ai_analysis_members()
+    all_members = AdminService.get_members()
+    all_boards  = AdminService.get_boards()
+    ctx = _sidebar_context(all_members, all_boards)
+    ctx.update({
+        'active_nav': 'files',
+        'members':    members,
+    })
     return render_template('admin/files.html', **ctx)
+
+
+# ──────────────────────────────────────────────
+#  AI 자료실 — 회원별 파일 목록
+# ──────────────────────────────────────────────
+@admin_bp.route('/files/<int:user_id>')
+@admin_required
+def files_detail(user_id):
+    page = max(int(request.args.get('page', 1)), 1)
+    member = AdminService.get_member_detail(user_id)
+    files, total_pages = AdminService.get_ai_analysis_files(user_id, page)
+
+    all_members = AdminService.get_members()
+    all_boards = AdminService.get_boards()
+    ctx = _sidebar_context(all_members, all_boards)
+    ctx.update({
+        'active_nav': 'files',
+        'member': member,
+        'files': files,
+        'page': page,
+        'total_pages': total_pages,
+        'user_id': user_id,
+    })
+    return render_template('admin/files_detail.html', **ctx)
 
 
 # ──────────────────────────────────────────────
@@ -382,6 +413,15 @@ def visitor_stats():
         'week':  AdminService.get_visitor_stats('week'),
         'month': AdminService.get_visitor_stats('month'),
     })
+
+# ──────────────────────────────────────────────
+#  AI 통계 API 라우트 추가
+# ──────────────────────────────────────────────
+@admin_bp.route('/api/ai_stats')
+@admin_required
+def ai_stats():
+    return jsonify(AdminService.get_ai_stats())
+
 
 
 # ══════════════════════════════════════════════
@@ -659,8 +699,10 @@ class AdminService:
                         (SELECT COUNT(*) FROM follows
                          WHERE following_id=%s)                                   AS follower_count,
                         (SELECT COUNT(*) FROM follows
-                         WHERE follower_id=%s)                                    AS following_count
-                """, (member_id, member_id, member_id, member_id))
+                         WHERE follower_id=%s)                                    AS following_count,
+                         (SELECT COUNT(*) FROM ai_analysis
+                         WHERE user_id=%s)                                        AS ai_count
+                """, (member_id, member_id, member_id, member_id, member_id))
                 return cursor.fetchone()
         except Exception as e:
             print(f"get_member_stats() 오류: {e}")
@@ -688,7 +730,8 @@ class AdminService:
                     cursor.execute("SELECT COUNT(*) AS cnt FROM board_comments WHERE member_id=%s", (member_id,))
                     total = cursor.fetchone()['cnt']
                     cursor.execute("""
-                        SELECT c.id, c.content, c.created_at, b.title AS board_title, b.id AS board_id
+                        SELECT c.id, c.content, c.created_at, c.active,
+                               b.title AS board_title, b.id AS board_id
                         FROM board_comments c
                         LEFT JOIN boards b ON c.board_id = b.id
                         WHERE c.member_id=%s
@@ -698,14 +741,28 @@ class AdminService:
 
                 elif tab == 'trash':
                     cursor.execute(
-                        "SELECT COUNT(*) AS cnt FROM boards WHERE member_id=%s AND deleted_at IS NOT NULL",
+                        "SELECT COUNT(*) AS cnt FROM boards WHERE member_id=%s AND (active=0 OR deleted_at IS NOT NULL)",
                         (member_id,))
                     total = cursor.fetchone()['cnt']
                     cursor.execute("""
-                        SELECT id, title, category, deleted_at
+                        SELECT id, title, category, created_at, deleted_at, active
                         FROM boards
-                        WHERE member_id=%s AND deleted_at IS NOT NULL
-                        ORDER BY deleted_at DESC
+                        WHERE member_id=%s AND (active=0 OR deleted_at IS NOT NULL)
+                        ORDER BY deleted_at DESC, created_at DESC
+                        LIMIT %s OFFSET %s
+                    """, (member_id, page_size, offset))
+
+                elif tab == 'comment_trash':
+                    cursor.execute("SELECT COUNT(*) AS cnt FROM board_comments WHERE member_id=%s AND active=0",
+                                   (member_id,))
+                    total = cursor.fetchone()['cnt']
+                    cursor.execute("""
+                        SELECT c.id, c.content, c.created_at, c.deleted_at, c.active,
+                               b.title AS board_title, b.id AS board_id
+                        FROM board_comments c
+                        LEFT JOIN boards b ON c.board_id = b.id
+                        WHERE c.member_id=%s AND c.active=0
+                        ORDER BY c.created_at DESC
                         LIMIT %s OFFSET %s
                     """, (member_id, page_size, offset))
 
@@ -757,10 +814,27 @@ class AdminService:
 
     @classmethod
     def delete_board_by_admin(cls, board_id):
+        """active 토글 (0↔1)"""
         conn = Session.get_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute("UPDATE boards SET active=0 WHERE id=%s", (board_id,))
+                cursor.execute("SELECT active FROM boards WHERE id=%s", (board_id,))
+                row = cursor.fetchone()
+                new_active = 0 if row['active'] == 1 else 1
+                if new_active == 0:
+                    # 숨김 처리 시 deleted_at 기록
+                    cursor.execute("""
+                        UPDATE boards
+                        SET active=%s, deleted_at=NOW()
+                        WHERE id=%s
+                    """, (new_active, board_id))
+                else:
+                    # 복구 시 deleted_at 초기화
+                    cursor.execute("""
+                        UPDATE boards
+                        SET active=%s, deleted_at=NULL
+                        WHERE id=%s
+                    """, (new_active, board_id))
             conn.commit()
             return True
         except Exception as e:
@@ -773,7 +847,23 @@ class AdminService:
         conn = Session.get_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute("DELETE FROM board_comments WHERE id=%s", (comment_id,))
+                cursor.execute("SELECT active FROM board_comments WHERE id=%s", (comment_id,))
+                row = cursor.fetchone()
+                new_active = 0 if row['active'] == 1 else 1
+                if new_active == 0:
+                    # 숨김 처리 시 deleted_at 기록
+                    cursor.execute("""
+                        UPDATE board_comments
+                        SET active=%s, deleted_at=NOW()
+                        WHERE id=%s
+                    """, (new_active, comment_id))
+                else:
+                    # 복구 시 deleted_at 초기화
+                    cursor.execute("""
+                        UPDATE board_comments
+                        SET active=%s, deleted_at=NULL
+                        WHERE id=%s
+                    """, (new_active, comment_id))
             conn.commit()
             return True
         except Exception as e:
@@ -793,3 +883,128 @@ class AdminService:
             print(f"delete_board_permanent() 오류: {e}")
             conn.rollback()
             return False
+
+    @classmethod
+    def get_ai_analysis_total(cls):
+        conn = Session.get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT
+                        COUNT(*) AS total,
+                        SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) AS today
+                    FROM ai_analysis
+                """)
+                row = cursor.fetchone()
+                return {
+                    'total': row['total'] or 0,
+                    'today': row['today'] or 0
+                }
+        except Exception as e:
+            print(f"get_ai_analysis_total() 오류: {e}")
+            return {'total': 0, 'today': 0}
+
+    @classmethod
+    def get_ai_stats(cls):
+        """동물 누적 합계 + 최근 14일 날짜별 탐지 추이"""
+        conn = Session.get_connection()
+        try:
+            with conn.cursor() as cursor:
+                # 누적 합계
+                cursor.execute("""
+                        SELECT
+                            COALESCE(SUM(boar_count), 0)       AS total_boar,
+                            COALESCE(SUM(water_deer_count), 0) AS total_deer,
+                            COALESCE(SUM(racoon_count), 0)     AS total_racoon
+                        FROM ai_analysis
+                    """)
+                totals = cursor.fetchone()
+
+                # 날짜별 추이 (최근 14일)
+                cursor.execute("""
+                        SELECT
+                            DATE(created_at)             AS date,
+                            SUM(boar_count)       AS boar,
+                            SUM(water_deer_count) AS deer,
+                            SUM(racoon_count)     AS racoon
+                        FROM ai_analysis
+                        WHERE created_at >= CURDATE() - INTERVAL 14 DAY
+                        GROUP BY DATE(created_at)
+                        ORDER BY date ASC
+                    """)
+                rows = cursor.fetchall()
+                trend = [
+                    {
+                        'date': str(r['date']),
+                        'boar': int(r['boar'] or 0),
+                        'deer': int(r['deer'] or 0),
+                        'racoon': int(r['racoon'] or 0),
+                    }
+                    for r in rows
+                ]
+
+                return {
+                    'totals': {
+                        'boar': int(totals['total_boar']),
+                        'deer': int(totals['total_deer']),
+                        'racoon': int(totals['total_racoon']),
+                    },
+                    'trend': trend,
+                }
+        except Exception as e:
+            print(f"get_ai_stats() 오류: {e}")
+            return {
+                'totals': {'boar': 0, 'deer': 0, 'racoon': 0},
+                'trend': []
+            }
+
+    @classmethod
+    def get_ai_analysis_members(cls):
+        """AI 분석 파일이 있는 회원 목록 + 각 통계"""
+        conn = Session.get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                        SELECT
+                            m.id, m.name, m.nickname, m.profile_img, m.uid,
+                            COUNT(a.id)              AS file_count,
+                            SUM(a.boar_count)        AS total_boar,
+                            SUM(a.water_deer_count)  AS total_deer,
+                            SUM(a.racoon_count)      AS total_racoon,
+                            MAX(a.created_at)        AS last_analysis
+                        FROM ai_analysis a
+                        JOIN members m ON a.user_id = m.id
+                        GROUP BY m.id, m.name, m.nickname, m.profile_img, m.uid
+                        ORDER BY last_analysis DESC
+                    """)
+                return cursor.fetchall()
+        except Exception as e:
+            print(f"get_ai_analysis_members() 오류: {e}")
+            return []
+
+    @classmethod
+    def get_ai_analysis_files(cls, user_id, page=1, page_size=10):
+        """특정 회원의 AI 분석 파일 목록"""
+        conn = Session.get_connection()
+        offset = (page - 1) * page_size
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) AS cnt FROM ai_analysis WHERE user_id=%s",
+                    (user_id,)
+                )
+                total = cursor.fetchone()['cnt']
+                cursor.execute("""
+                        SELECT id, filename, boar_count, water_deer_count,
+                               racoon_count, created_at, image_url
+                        FROM ai_analysis
+                        WHERE user_id=%s
+                        ORDER BY created_at DESC
+                        LIMIT %s OFFSET %s
+                    """, (user_id, page_size, offset))
+                rows = cursor.fetchall()
+                total_pages = max((total + page_size - 1) // page_size, 1)
+                return rows, total_pages
+        except Exception as e:
+            print(f"get_ai_analysis_files() 오류: {e}")
+            return [], 1

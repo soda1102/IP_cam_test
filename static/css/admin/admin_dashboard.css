@@ -70,3 +70,9 @@
     .stat-value { font-size: 1.4rem; }
     .stat-label { font-size: 0.7rem; }
 }
+@media (max-width: 768px) {
+    /* 동물 탐지 섹션만 1열로 */
+    .animal-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

@@ -1,122 +1,59 @@
 {% extends "admin/base.html" %}
- 
+
 {% block title %}도(道)서관 — AI 자료실{% endblock %}
 {% block topbar_title %}📂 AI 자료실{% endblock %}
- 
-{% block topbar_extra %}
-<button class="topbar-btn primary" onclick="showToast('📁 파일 업로드 기능 준비 중')">+ 파일 업로드</button>
+
+{% block extra_style %}
+<link rel="stylesheet" href="/static/css/admin/admin_files.css">
 {% endblock %}
- 
+
 {% block content %}
-<div class="section-title">파일 자료실 관리</div>
-<div class="section-sub">자료 승인 · 카테고리 분류 · 다운로드 통계</div>
- 
-<div class="filter-bar">
-    <input class="search-input" type="text" placeholder="🔍 파일명 또는 업로더 검색...">
-    <select class="filter-select">
-        <option>전체 카테고리</option>
-        <option>교통법규</option>
-        <option>블랙박스 분석</option>
-        <option>안전 가이드</option>
-    </select>
-    <select class="filter-select">
-        <option>전체 상태</option>
-        <option>승인됨</option>
-        <option>대기 중</option>
-    </select>
+<div class="section-title">AI 자료실</div>
+<div class="section-sub">분석 파일 보유 회원 목록 · 클릭하면 파일 상세 확인</div>
+
+{% if members %}
+<div class="files-grid">
+    {% for m in members %}
+    <a href="{{ url_for('admin.files_detail', user_id=m['id']) }}" class="file-member-card">
+        <div class="card-top">
+            {% if m['profile_img'] %}
+                <img src="{{ m['profile_img'] }}" class="card-avatar" alt="프로필">
+            {% else %}
+                <div class="card-avatar">{{ m['name'][0] if m['name'] else '?' }}</div>
+            {% endif %}
+            <div>
+                <div class="card-name">{{ m['name'] }}</div>
+                <div class="card-nickname">@{{ m['nickname'] or m['uid'] }}</div>
+            </div>
+        </div>
+        <div class="card-stats">
+            <div>
+                <div class="cs-label">파일 수</div>
+                <div class="cs-value">{{ m['file_count'] }}</div>
+            </div>
+            <div>
+                <div class="cs-label">🐗 멧돼지</div>
+                <div class="cs-value" style="color:var(--danger);">{{ m['total_boar'] or 0 }}</div>
+            </div>
+            <div>
+                <div class="cs-label">🦌 고라니</div>
+                <div class="cs-value" style="color:var(--warning);">{{ m['total_deer'] or 0 }}</div>
+            </div>
+            <div>
+                <div class="cs-label">🦝 너구리</div>
+                <div class="cs-value" style="color:var(--teal);">{{ m['total_racoon'] or 0 }}</div>
+            </div>
+        </div>
+        <div style="margin-top:12px;font-size:.72rem;color:var(--text-muted);font-weight:500;">
+            마지막 분석 {{ m['last_analysis'].strftime('%Y.%m.%d %H:%M') }}
+        </div>
+    </a>
+    {% endfor %}
 </div>
- 
-<div class="panel">
-    <div class="table-scroll-wrap">
-        <table class="data-table" style="min-width:700px;">
-            <thead>
-                <tr>
-                    <th>파일명</th>
-                    <th>카테고리</th>
-                    <th>업로더</th>
-                    <th>크기</th>
-                    <th>다운로드</th>
-                    <th>업로드일</th>
-                    <th>상태</th>
-                    <th>관리</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="text-align:left;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:1.3rem;">📄</span>
-                            <strong>2025 교통법규 개정 요약.pdf</strong>
-                        </div>
-                    </td>
-                    <td><span class="badge badge-notice">교통법규</span></td>
-                    <td>관리자</td>
-                    <td style="color:var(--text-muted)">2.4 MB</td>
-                    <td style="font-weight:700;">1,203</td>
-                    <td style="color:var(--text-muted)">2025.07.15</td>
-                    <td><span class="badge badge-active">승인됨</span></td>
-                    <td style="white-space:nowrap;">
-                        <button class="action-btn" onclick="showToast('📥 다운로드 시작')">다운로드</button>
-                        <button class="action-btn danger" onclick="showToast('🗑️ 파일 삭제됨')">삭제</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:1.3rem;">🎬</span>
-                            <strong>블랙박스_분석_사례집_2025.zip</strong>
-                        </div>
-                    </td>
-                    <td><span class="badge badge-review">블랙박스</span></td>
-                    <td>김도현</td>
-                    <td style="color:var(--text-muted)">18.7 MB</td>
-                    <td style="font-weight:700;">—</td>
-                    <td style="color:var(--text-muted)">2025.07.17</td>
-                    <td><span class="badge badge-pending">대기 중</span></td>
-                    <td style="white-space:nowrap;">
-                        <button class="action-btn" style="border-color:var(--teal);color:var(--teal);"
-                                onclick="showToast('✅ 승인되었습니다.')">승인</button>
-                        <button class="action-btn danger" onclick="showToast('❌ 거절되었습니다.')">거절</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:1.3rem;">📊</span>
-                            <strong>야간 운전 안전 가이드북.pptx</strong>
-                        </div>
-                    </td>
-                    <td><span class="badge" style="background:rgba(39,174,96,0.1);color:var(--success);">안전 가이드</span></td>
-                    <td>정예린</td>
-                    <td style="color:var(--text-muted)">5.1 MB</td>
-                    <td style="font-weight:700;">487</td>
-                    <td style="color:var(--text-muted)">2025.07.10</td>
-                    <td><span class="badge badge-active">승인됨</span></td>
-                    <td style="white-space:nowrap;">
-                        <button class="action-btn" onclick="showToast('📥 다운로드 시작')">다운로드</button>
-                        <button class="action-btn danger" onclick="showToast('🗑️ 파일 삭제됨')">삭제</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:1.3rem;">📄</span>
-                            <strong>도로교통법_전문_2024.pdf</strong>
-                        </div>
-                    </td>
-                    <td><span class="badge badge-notice">교통법규</span></td>
-                    <td>관리자</td>
-                    <td style="color:var(--text-muted)">8.9 MB</td>
-                    <td style="font-weight:700;">3,421</td>
-                    <td style="color:var(--text-muted)">2024.12.01</td>
-                    <td><span class="badge badge-active">승인됨</span></td>
-                    <td style="white-space:nowrap;">
-                        <button class="action-btn" onclick="showToast('📥 다운로드 시작')">다운로드</button>
-                        <button class="action-btn danger" onclick="showToast('🗑️ 파일 삭제됨')">삭제</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+{% else %}
+<div class="panel" style="padding:60px;text-align:center;color:var(--text-muted);font-weight:600;">
+    AI 분석 파일이 없습니다.
 </div>
+{% endif %}
+
 {% endblock %}

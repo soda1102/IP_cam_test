@@ -43,12 +43,15 @@
                 {% endif %}
             </span>
             <span>UID: {{ member['uid'] }}</span>
+            {% if member['birthdate'] %}
+            <span>생년월일 : {{ member['birthdate'].strftime('%Y.%m.%d') }}</span>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <!-- 통계 -->
-<div class="stats-row">
+<div class="stats-row stats-row-5">
     <div class="stat-mini">
         <div class="s-label">게시글</div>
         <div class="s-value">{{ stats['board_count'] }}</div>
@@ -65,6 +68,10 @@
         <div class="s-label">팔로잉</div>
         <div class="s-value">{{ stats['following_count'] }}</div>
     </div>
+    <div class="stat-mini">
+        <div class="s-label">AI 분석</div>
+        <div class="s-value">{{ stats['ai_count'] }}</div>
+    </div>
 </div>
 
 <!-- 탭 네비 -->
@@ -74,7 +81,9 @@
     <a href="{{ url_for('admin.member_detail', member_id=member['id'], tab='comments') }}"
        class="tab-btn {% if tab == 'comments' %}active{% endif %}">💬 댓글</a>
     <a href="{{ url_for('admin.member_detail', member_id=member['id'], tab='trash') }}"
-       class="tab-btn {% if tab == 'trash' %}active{% endif %}">🗑️ 휴지통</a>
+       class="tab-btn {% if tab == 'trash' %}active{% endif %}">🗑️ 게시글 휴지통</a>
+    <a href="{{ url_for('admin.member_detail', member_id=member['id'], tab='comment_trash') }}"
+   class="tab-btn {% if tab == 'comment_trash' %}active{% endif %}">🧹 댓글 휴지통</a>
     <a href="{{ url_for('admin.member_detail', member_id=member['id'], tab='follows') }}"
        class="tab-btn {% if tab == 'follows' %}active{% endif %}">👥 팔로잉</a>
     <a href="{{ url_for('admin.member_detail', member_id=member['id'], tab='followers') }}"
@@ -129,8 +138,11 @@
                     </td>
                     <td style="text-align:center;">
                         {% if b['active'] %}
-                        <button class="action-btn danger"
-                                onclick="hideBoard({{ member['id'] }}, {{ b['id'] }})">숨김</button>
+                            <button class="action-btn danger"
+                                    onclick="hideBoard({{ member['id'] }}, {{ b['id'] }})">숨김</button>
+                        {% else %}
+                            <button class="action-btn"
+                                    onclick="restoreBoard({{ member['id'] }}, {{ b['id'] }})">복구</button>
                         {% endif %}
                     </td>
                 </tr>
@@ -166,8 +178,13 @@
                     </td>
                     <td>{{ c['created_at'].strftime('%Y.%m.%d') }}</td>
                     <td style="text-align:center;">
-                        <button class="action-btn danger"
-                                onclick="deleteComment({{ member['id'] }}, {{ c['id'] }})">삭제</button>
+                        {% if c['active'] %}
+                            <button class="action-btn danger"
+                                    onclick="hideComment({{ member['id'] }}, {{ c['id'] }})">숨김</button>
+                        {% else %}
+                            <button class="action-btn"
+                                    onclick="restoreComment({{ member['id'] }}, {{ c['id'] }})">복구</button>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
@@ -177,7 +194,7 @@
         </table>
     </div>
 
-    <!-- 휴지통 탭 -->
+    <!-- 게시글 휴지통 탭 -->
     {% elif tab == 'trash' %}
     <div class="table-scroll-wrap">
         <table class="data-table" style="min-width:500px;">
@@ -186,7 +203,8 @@
                     <th style="width:60px;">번호</th>
                     <th style="width:80px;">카테고리</th>
                     <th style="width:200px;text-align:left">제목</th>
-                    <th style="width:110px;">삭제일</th>
+                    <th style="width:100px;">등록일</th>
+                    <th style="width:100px;">삭제일</th>
                     <th style="width:100px;">관리</th>
                 </tr>
             </thead>
@@ -208,14 +226,57 @@
                     <td style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">
                         <strong>{{ b['title'] }}</strong>
                     </td>
-                    <td>{{ b['deleted_at'].strftime('%Y.%m.%d') }}</td>
+                    <td>{{ b['created_at'].strftime('%Y.%m.%d') }}</td>
+                    <td>{{ b['deleted_at'].strftime('%Y.%m.%d') if b['deleted_at'] else '-' }}</td>
                     <td style="text-align:center;">
-                        <button class="action-btn danger"
-                                onclick="deleteTrash({{ member['id'] }}, {{ b['id'] }})">영구삭제</button>
+                        <button class="action-btn"
+                                onclick="restoreTrash({{ member['id'] }}, {{ b['id'] }})">복구</button>
                     </td>
                 </tr>
                 {% else %}
                 <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">휴지통이 비어있습니다.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 댓글 휴지통 탭 -->
+    {% elif tab == 'comment_trash' %}
+    <div class="table-scroll-wrap">
+        <table class="data-table" style="min-width:600px;">
+            <thead>
+                <tr>
+                    <th style="width:60px;">번호</th>
+                    <th style="width:150px;text-align:left;">내용</th>
+                    <th style="width:150px;text-align:left;">게시글</th>
+                    <th style="width:100px;">작성일</th>
+                    <th style="width:100px;">삭제일</th>
+                    <th style="width:80px;">관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in tab_data %}
+                <tr>
+                    <td>{{ c['id'] }}</td>
+                    <td style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;font-weight:700;">
+                        {{ c['content'] }}
+                    </td>
+                    <td style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-weight:600;">
+                        {{ c['board_title'] or '(삭제된 게시글)' }}
+                    </td>
+                    <td style="font-weight:600;">{{ c['created_at'].strftime('%Y.%m.%d') }}</td>
+                    <td style="font-weight:600;">{{ c['deleted_at'].strftime('%Y.%m.%d') if c['deleted_at'] else '유저 삭제' }}</td>
+                    <td style="text-align:center;">
+                        <button class="action-btn"
+                                onclick="restoreComment({{ member['id'] }}, {{ c['id'] }})">복구</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">
+                        숨겨진 댓글이 없습니다.
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

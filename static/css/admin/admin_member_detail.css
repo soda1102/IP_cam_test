@@ -40,6 +40,9 @@
     padding: 16px 20px;
     text-align: center;
 }
+.stats-row-5 {
+    grid-template-columns: repeat(5, 1fr);
+}
 .stat-mini .s-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
 .stat-mini .s-value { font-size: 1.5rem; font-weight: 800; }
 
