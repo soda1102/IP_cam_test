@@ -4,7 +4,54 @@
 
 {% block style %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mypage/mypage_activity.css') }}">
+<style>
+    /* 전체 레이아웃 설정 */
+    .activity-body {
+        background-color: #F8F9FA;
+        padding: 50px 0 0 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .activity-header-box {
+        max-width: 900px; margin: 0 auto 20px auto; background-color: #008080;
+        color: #FFFFFF; border-radius: 12px; height: 55px;
+        display: flex; justify-content: center; align-items: center; width: 100%;
+    }
+    .activity-header-box h2 { font-size: 20px; margin: 0 !important; }
+
+    /* ✅ 카드 높이 650px 고정 */
+    .activity-card-container {
+        max-width: 900px; width: 100%; margin: 0 auto; border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08); background-color: #FFFFFF;
+        height: 650px; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    #activityTab.nav-tabs { border-bottom: 2px solid #f0f0f0; justify-content: center; }
+    #activityTab .nav-link { color: #333; font-weight: 600; border: none !important; padding: 15px 25px; }
+    #activityTab .nav-link.active { color: #008080 !important; border-bottom: 3px solid #008080 !important; }
+
+    #activityTabContent.tab-content { padding: 30px; flex: 1; overflow-y: auto; }
+
+    .activity-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 15px; border-bottom: 1px solid #f1f1f1; text-decoration: none; color: inherit;
+    }
+    .item-title { font-weight: 600; margin-bottom: 3px; }
+    .item-date { font-size: 12px; color: #999; }
+
+    /* ✅ 하단 여백의 정중앙 배치 */
+    .home-back-wrapper {
+        flex: 1; display: flex; justify-content: center; align-items: center;
+        padding: 20px 0; width: 100%;
+    }
+    .home-back a { color: #888; text-decoration: none; font-size: 14px; }
+    .empty-msg { text-align: center; padding: 50px 0; color: #ccc; }
+
+    .page-link { color: #495057 !important; background-color: #fff !important; border: 1px solid #dee2e6 !important; }
+    .page-item.active .page-link { background-color: #008080 !important; border-color: #008080 !important; color: white !important;}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -62,13 +109,33 @@
                 </div>
 
                 <div class="tab-pane fade" id="trash">
-                    {% if my_trash %}{% for post in my_trash %}
-                    <div class="activity-item">
-                        <div style="flex: 1;"><div class="item-title">{{ post.title }}</div><div class="item-date">삭제일: {{ post.deleted_at.strftime('%Y-%m-%d') if post.deleted_at }}</div></div>
-                        <button class="btn btn-sm btn-outline-danger">삭제</button>
-                    </div>
-                    {% endfor %}{% else %}<div class="empty-msg"><br><br><br><br><br><br><br>휴지통이 비어 있습니다.</div>{% endif %}
+                    {% if my_trash %}
+                        {% for post in my_trash %}
+                        <div class="activity-item" style="cursor: default;">
+                            <div style="flex: 1;">
+                                <div class="item-title">{{ post.title }}</div>
+                                <div class="item-date">
+                                    삭제일: {{ post.deleted_at.strftime('%Y-%m-%d') if post.deleted_at }} |
+                                    <span class="text-danger fw-bold">{{ post.remaining_days }}일 남음</span>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button onclick="location.href='{{ url_for('board.board_restore', board_id=post.id) }}'"
+                                        class="btn btn-sm btn-outline-success border-0 me-2">
+                                    <i class="bi bi-arrow-counterclockwise"></i> 복구
+                                </button>
+                                <button onclick="if(confirm('정말 영구 삭제하시겠습니까?')){ location.href='{{ url_for('board.board_permanent_delete', board_id=post.id) }}' }"
+                                        class="btn btn-sm btn-outline-danger border-0">
+                                    <i class="bi bi-trash3"></i> 삭제
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-msg"><br><br><br><br><br><br><br>휴지통이 비어 있습니다.</div>
+                    {% endif %}
                 </div>
+
 
                 <div class="tab-pane fade" id="blocks">
                     {% if my_blocks %}{% for block in my_blocks %}
@@ -101,5 +168,19 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/mypage/mypage_activity.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const hash = window.location.hash;
+    if (hash) {
+        const targetTab = document.querySelector(`button[data-bs-target="${hash}"]`);
+        if (targetTab) { new bootstrap.Tab(targetTab).show(); }
+    }
+    const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', (e) => {
+            history.replaceState(null, null, e.target.getAttribute('data-bs-target'));
+        });
+    });
+});
+</script>
 {% endblock %}
