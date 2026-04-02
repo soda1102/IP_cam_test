@@ -52,9 +52,49 @@ class MemberRepository:
         row = fetch_query("SELECT LAST_INSERT_ID() AS new_id", one=True)
         return row['new_id'] if row else -1
 
-    def update_profile_img(self, member_id: int, file_url: str):
-        """프로필 이미지 URL 업데이트"""
+    def update_profile_img(self, member_id: int, file_url: Optional[str]):
+        """프로필 이미지 업데이트 (None이면 삭제)"""
         execute_query(
             "UPDATE members SET profile_img = %s WHERE id = %s",
             (file_url, member_id)
+        )
+
+    def update_info(
+            self,
+            member_id: int,
+            name: Optional[str] = None,
+            nickname: Optional[str] = None,
+            password: Optional[str] = None,
+            birthdate: Optional[str] = None,
+    ):
+        """회원 정보 수정 — 입력된 필드만 동적으로 UPDATE"""
+        set_clauses, params = [], []
+
+        if name:
+            set_clauses.append("name = %s")
+            params.append(name)
+        if nickname:
+            set_clauses.append("nickname = %s")
+            params.append(nickname)
+        if password:
+            set_clauses.append("password = %s")
+            params.append(password)
+        if birthdate:
+            set_clauses.append("birthdate = %s")
+            params.append(birthdate)
+
+        if not set_clauses:
+            return  # 수정할 내용 없음
+
+        params.append(member_id)
+        execute_query(
+            f"UPDATE members SET {', '.join(set_clauses)} WHERE id = %s",
+            tuple(params)
+        )
+
+    def deactivate(self, member_id: int):
+        """회원 탈퇴 (soft delete)"""
+        execute_query(
+            "UPDATE members SET active = 0 WHERE id = %s",
+            (member_id,)
         )

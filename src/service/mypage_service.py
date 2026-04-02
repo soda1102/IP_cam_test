@@ -1,476 +1,204 @@
-from flask import (
-    Blueprint,
-    request, session, flash,
-    render_template, redirect, url_for,
-)
-
-from src.common import (
-    fetch_query, execute_query,
-    log_system,
-    login_required, upload_file, Session
-)
-
-from src.common import fetch_query, execute_query, log_system, login_required
-# storage.py가 src 폴더 안에 있다면 아래와 같이 import
-from src.common.storage import upload_file
-from src.domain import Member
+# src/service/mypage_service.py
 import math
-import datetime
-import urllib.parse
-from flask import Blueprint, request, session, flash, render_template, redirect, url_for, make_response, jsonify
-# 모델 임포트 경로가 정확해야 합니다.
-from src.common import fetch_query, login_required
-import urllib.parse
+from typing import Optional
+from werkzeug.datastructures import FileStorage
 
-mypage_bp = Blueprint('mypage', __name__)
+from src.domain.file import AllowedExtension
+from src.domain.ai_analysis import AIAnalysis
+from src.repository.member_repository import MemberRepository
+from src.repository.activity_repository import ActivityRepository
+from src.common.storage import upload_file
 
-@mypage_bp.route('/')
-@login_required
-def mypage_info():
-    # 1. 세션에서 로그인한 사용자의 PK(id)를 가져옴
-    user_pk = session.get('user_id')
 
-    if not user_pk:
-        return redirect(url_for('auth.login'))
+class MypageService:
 
-    # 2. DB에서 해당 사용자의 최신 정보 조회 (created_at 포함)
-    row = fetch_query("SELECT * FROM members WHERE id = %s", (user_pk,), one=True)
+    def __init__(self):
+        self.member_repo   = MemberRepository()
+        self.activity_repo = ActivityRepository()
 
-    # 3. Member 객체로 변환 (가입일자가 포함된 버전)
-    user_obj = Member.from_db(row)
+    # ════════════════════════════════════════
+    # 마이페이지 메인 / 정보
+    # ════════════════════════════════════════
 
-    # 4. 템플릿 렌더링 (user 객체 하나만 넘겨도 객체 안에 가입일이 들어있음)
-    return render_template('mypage/info.html', user=user_obj)
+    def get_mypage(self, user_id: int) -> dict:
+        """마이페이지 메인 — 유저 정보 + 활동 요약"""
+        member = self.member_repo.find_by_id(user_id)
+        if not member:
+            raise ValueError("존재하지 않는 사용자입니다.")
 
-# 마이페이지
-@mypage_bp.route('/main')
-@login_required
-def mypage():
-    # 1. 유저 정보 가져오기 (이때 profile_img 컬럼 데이터가 포함되어야 합니다)
-    user = fetch_query("SELECT * FROM members WHERE id = %s", (session['user_id'],), one=True)
-    # 2. 활동 요약 정보
-    sql_count = """
-        SELECT 
-            COUNT(*) as total_cnt,
-            COUNT(CASE WHEN (SELECT COUNT(*) FROM reports WHERE board_id = b.id) >= 1 THEN 1 END) as reported_cnt
-        FROM boards b
-        WHERE b.member_id = %s AND b.active = 1
-    """
-    count_data = fetch_query(sql_count, (session['user_id'],), one=True)
+        summary = self.activity_repo.get_board_summary(user_id)
+        return {'user': member, **summary}
 
-    board_count = count_data['total_cnt'] if count_data else 0
-    reported_count = count_data['reported_cnt'] if count_data else 0
-    # 3. render_template 시 user 객체를 통째로 넘기면 user.profile_img를 HTML에서 쓸 수 있습니다.
-    return render_template('mypage/info.html',
-                           user=user,
-                           board_count=board_count,
-                           reported_count=reported_count)
+    def get_member_info(self, user_id: int) -> dict:
+        """회원 정보 상세 페이지"""
+        member = self.member_repo.find_by_id(user_id)
+        if not member:
+            raise ValueError("존재하지 않는 사용자입니다.")
+        return {'user': member}
 
-# 회원 정보 수정
-@mypage_bp.route('/edit', methods=['GET', 'POST'])
-@login_required
-def member_edit():
-    if request.method == 'GET':
-        user = fetch_query("SELECT * FROM members WHERE id = %s", (session['user_id'],), one=True)
-        return render_template('mypage/edit.html', user=user)
+    # ════════════════════════════════════════
+    # 회원 정보 수정
+    # ════════════════════════════════════════
 
-    # 1. 폼 데이터 가져오기
-    new_name = request.form.get('name')
-    new_nickname = request.form.get('nickname')
-    new_pw = request.form.get('password')
-    b_year = request.form.get('birth_year')
-    b_month = request.form.get('birth_month')
-    b_day = request.form.get('birth_day')
-
-    try:
-        set_clauses = []
-        params = []
-
-        if new_name:
-            set_clauses.append("name = %s")
-            params.append(new_name)
-
-        if new_nickname:
-            set_clauses.append("nickname = %s")
-            params.append(new_nickname)
-
-        if new_pw:
-            set_clauses.append("password = %s")
-            params.append(new_pw)
-
-        # 2. 생년월일 처리 로직
-        if b_year and b_month and b_day:
-
-            full_birthday = f"{b_year}-{b_month.zfill(2)}-{b_day.zfill(2)}"
-            set_clauses.append("birthdate = %s")
-            params.append(full_birthday)
-
-        if set_clauses:
-
-            params.append(session['user_id'])
-            sql = f"UPDATE members SET {', '.join(set_clauses)} WHERE id = %s"
-            execute_query(sql, tuple(params))
-
-        # 3. 세션 갱신 (선택사항)
-        session['user_name'] = new_name
-        session['user_nickname'] = new_nickname
-
-        return "<script>alert('수정 완료');location.href='/mypage';</script>"
-
-    except Exception as e:
-        print(f"수정 에러: {e}")
-        return "<script>alert('수정 중 오류 발생');history.back();</script>"
-
-# 프로필
-@mypage_bp.route('/profile/upload', methods=['POST'])
-@login_required
-def profile_upload():
-    user_id = session.get('user_id')
-
-    # HTML의 <input name="profile_img">와 일치해야 함
-    if 'profile_img' not in request.files:
-        return "<script>alert('파일이 전송되지 않았습니다.');history.back();</script>"
-
-    file = request.files['profile_img']
-    if file.filename == '':
-        return "<script>alert('선택된 사진이 없습니다.');history.back();</script>"
-
-    try:
-        # storage.py의 함수를 이용해 Cloudinary 업로드
-        file_url = upload_file(file, folder=f"user_profiles/{user_id}")
-
-        if file_url:
-            # 1. DB 업데이트
-            sql = "UPDATE members SET profile_img = %s WHERE id = %s"
-            execute_query(sql, (file_url, user_id))
-
-            # 2. [핵심] 세션 정보 즉시 갱신
-            # 템플릿이나 헤더에서 session['user_profile'] 등을 사용한다면 여기서 바꿔줘야 합니다.
-            session['user_profile'] = file_url
-
-            # 3. [핵심] 알림 후 마이페이지로 이동 (경로 끝에 / 확인)
-            return "<script>alert('프로필 사진이 변경되었습니다.'); location.href='/mypage/';</script>"
-
-    except Exception as e:
-        return f"<script>alert('오류 발생: {str(e)}');history.back();</script>"
-
-# 프로필 삭제
-@mypage_bp.route('/profile/delete', methods=['POST'])
-@login_required
-def profile_delete():
-    user_id = session.get('user_id')
-
-    try:
-        # DB의 profile_img를 NULL(또는 빈 문자열)로 업데이트
-        sql = "UPDATE members SET profile_img = NULL WHERE id = %s"
-        execute_query(sql, (user_id,))
-
-        # 세션 정보도 초기화
-        session['user_profile'] = None
-
-        return "<script>alert('프로필 사진이 삭제되었습니다.'); location.href='/mypage/';</script>"
-    except Exception as e:
-        return f"<script>alert('삭제 중 오류 발생: {str(e)}'); history.back();</script>"
-
-# 나의 활동 메뉴
-@mypage_bp.route('/my_activity/')
-@login_required
-def my_activity():
-
-    # 1. 로그인 확인 및 사용자 ID 가져오기
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('auth.login'))
-
-    # 2. 페이지네이션 설정 (현재 페이지 번호 받기)
-    page = request.args.get('page', 1, type=int)
-    per_page = 10  # 한 페이지에 보여줄 글 개수
-    offset = (page - 1) * per_page
-
-    # 3. 데이터베이스 조회 (작성 게시물 개수 파악)
-    total_row = fetch_query("SELECT COUNT(*) as cnt FROM boards WHERE member_id = %s AND active = 1", (user_id,), one=True)
-    total_count = total_row['cnt']
-    total_pages = math.ceil(total_count / per_page)
-
-    # 4 - 1. 작성한 게시물
-    my_posts = fetch_query("""
-        SELECT * FROM boards 
-        WHERE member_id = %s AND active = 1 
-        ORDER BY created_at DESC
-        LIMIT %s OFFSET %s
-    """, (user_id, per_page, offset))
-
-    # 4 - 2. 좋아요
-    my_likes = fetch_query("""
-        SELECT b.*, m.name as writer_name 
-        FROM board_likes bl
-        JOIN boards b ON bl.board_id = b.id
-        JOIN members m ON b.member_id = m.id
-        WHERE bl.member_id = %s
-    """, (user_id,))
-
-    # 4 - 3. 스크랩
-    my_scraps = fetch_query("""
-        SELECT b.*, bs.created_at as scrap_date 
-        FROM board_scrap bs
-        JOIN boards b ON bs.board_id = b.id
-        WHERE bs.member_id = %s
-    """, (user_id,))
-
-    # 4 - 4. 작성한 댓글
-    my_comments = fetch_query("""
-            SELECT c.*, b.title as board_title 
-            FROM board_comments c
-            JOIN boards b ON c.board_id = b.id
-            WHERE c.member_id = %s
-            ORDER BY c.created_at DESC
-        """, (user_id,))
-
-    # 4 - 5. 휴지통
-    my_trash = fetch_query("""
-        SELECT *, DATEDIFF(DATE_ADD(deleted_at, INTERVAL 30 DAY), NOW()) as remaining_days
-        FROM boards 
-        WHERE member_id = %s AND active = 0 AND deleted_at IS NOT NULL
-        ORDER BY deleted_at DESC
-    """, (user_id,))
-
-    # 4 - 6. 차단 목록
-    my_blocks = fetch_query("""
-            SELECT b.*, m.name as blocked_name 
-            FROM blocks b
-            JOIN members m ON b.blocked_id = m.id
-            WHERE b.blocker_id = %s
-            ORDER BY b.created_at DESC
-        """, (user_id,))
-
-    # 5. HTML이 기다리고 있는 pagination 객체 만들기
-    pagination_obj = {
-        'page': page,
-        'total_pages': total_pages,
-        'has_prev': page > 1,
-        'has_next': page < total_pages,
-        'prev_num': page - 1,
-        'next_num': page + 1
-    }
-
-    # 6. 템플릿으로 데이터 전송
-    return render_template('mypage/my_activity.html',
-                           my_posts=my_posts,
-                           my_likes=my_likes,
-                           my_scraps=my_scraps,
-                           my_comments=my_comments,
-                           my_trash=my_trash,  
-                           my_blocks=my_blocks,
-                           pagination=pagination_obj)
-
-# 회원 탈퇴
-@mypage_bp.route('/delete_account', methods=['GET', 'POST'])
-@login_required
-def delete_account():
-    user_id = session.get('user_id')
-
-    if not user_id:
-        return "<script>alert('로그인이 만료되었습니다.'); location.href='/login';</script>"
-
-    try:
-        # 1. DB에서 삭제 대신 active 상태를 0(False)으로 업데이트
-        sql = "UPDATE members SET active = 0 WHERE id = %s"
-        execute_query(sql, (user_id,))
-
-        # 2. 세션 정보 비우기 (자동 로그아웃)
-        session.clear()
-
-        # 3. 알림 후 메인 페이지로 이동
-        return """
-            <script>
-                alert('회원 탈퇴가 완료되었습니다.\\n그동안 이용해 주셔서 감사합니다.'); 
-                location.href='/';
-            </script>
+    def edit_member(
+        self,
+        user_id: int,
+        name: Optional[str] = None,
+        nickname: Optional[str] = None,
+        password: Optional[str] = None,
+        birth_year: Optional[str] = None,
+        birth_month: Optional[str] = None,
+        birth_day: Optional[str] = None,
+    ) -> dict:
         """
+        회원 정보 수정
+        Returns: 갱신된 세션 데이터
+        """
+        # 생년월일 처리
+        birthdate = None
+        if birth_year and birth_month and birth_day:
+            birthdate = f"{birth_year}-{birth_month.zfill(2)}-{birth_day.zfill(2)}"
 
-    except Exception as e:
-        return f"<script>alert('탈퇴 처리 중 오류가 발생했습니다: {str(e)}'); history.back();</script>"
-
-# 차단 해제
-@mypage_bp.route('/my_activity/unblock/<int:blocked_id>')
-@login_required
-def unblock_user(blocked_id):
-    user_id = session.get('user_id')
-
-    # 1. DB 삭제 (테이블명이 blocks인지 user_blocks인지 꼭 확인!)
-    query = "DELETE FROM blocks WHERE blocker_id = %s AND blocked_id = %s"
-    execute_query(query, (user_id, blocked_id))
-
-    # 2. 올바른 리다이렉트 방법 (블루프린트명.함수명)
-    return redirect(url_for('mypage.my_activity') + '#blocks')
-
-# AI 분석 결과 저장
-@mypage_bp.route('/save_result', methods=['POST'])
-@login_required
-def save_result():
-    file = request.files.get('merged_image')
-    # 사용자가 입력한 이름을 가져오되, 없으면 기본값 설정
-    original_filename = request.form.get('original_filename') or '무제_분석결과'
-
-    try:
-        boar_count = int(request.form.get('boar_count', 0))
-        water_deer_count = int(request.form.get('water_deer_count', 0))
-        racoon_count = int(request.form.get('racoon_count', 0))
-    except (ValueError, TypeError):
-        boar_count = water_deer_count = racoon_count = 0
-
-    user_id = session.get('user_id')
-    if not file or not user_id:
-        return jsonify({"success": False, "message": "로그인 정보 또는 파일이 없습니다."}), 400
-
-    try:
-        # 1. Cloudinary 업로드
-        result_url = upload_file(file, folder="results")
-
-        # ✅ [교정] 아래 코드들이 try 문 안으로 일렬로 들여쓰기 되어야 합니다.
-        if result_url:
-            sql = """
-                INSERT INTO ai_analysis 
-                (user_id, filename, image_url, boar_count, water_deer_count, racoon_count, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW())
-            """
-
-            execute_query(sql, (
-                user_id,
-                original_filename,
-                result_url,
-                boar_count,
-                water_deer_count,
-                racoon_count
-            ))
-
-            return jsonify({"success": True, "url": result_url, "message": "성공적으로 저장되었습니다!"})
-        else:
-            return jsonify({"success": False, "message": "업로드된 URL을 찾을 수 없습니다."}), 500
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"저장 중 시스템 오류: {e}")
-        return jsonify({"success": False, "message": f"서버 오류: {str(e)}"}), 500
-
-# AI 분석 결과
-@mypage_bp.route('/ai_results')
-@login_required
-def ai_results():
-    try:
-        user_id = session.get('user_id')
-        page = request.args.get('page', 1, type=int)
-        per_page = 5
-        offset = (page - 1) * per_page
-
-        total_row = fetch_query(
-            "SELECT COUNT(*) as cnt FROM ai_analysis WHERE user_id = %s",
-            (user_id,), one=True
+        self.member_repo.update_info(
+            member_id = user_id,
+            name      = name,
+            nickname  = nickname,
+            password  = password,
+            birthdate = birthdate,
         )
-        total_count = total_row['cnt'] if total_row else 0
-        total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
 
-        list_sql = """
-            SELECT id, filename, boar_count, water_deer_count, racoon_count, created_at 
-            FROM ai_analysis 
-            WHERE user_id = %s 
-            ORDER BY created_at DESC
-            LIMIT %s OFFSET %s
-        """
-        items = fetch_query(list_sql, (user_id, per_page, offset))
-
-        formatted_items = []
-        if items:
-            for row in items:
-                if isinstance(row, dict):
-                    formatted_items.append(row)
-                else:
-                    formatted_items.append({
-                        'id': row[0],
-                        'filename': row[1],
-                        'boar_count': row[2],
-                        'water_deer_count': row[3],
-                        'racoon_count': row[4],
-                        'created_at': row[5]
-                    })
-
-        pagination_obj = {
-            'records': formatted_items,
-            'total_pages': total_pages,
-            'page': page,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_num': page - 1,
-            'next_num': page + 1
+        # 갱신된 세션 데이터 반환 (Controller에서 session 업데이트)
+        return {
+            'user_name':     name,
+            'user_nickname': nickname,
         }
-        return render_template('mypage/ai_model.html', pagination=pagination_obj)
 
-    except Exception as e:
-        print(f"목록 로드 중 에러: {e}")
-        return render_template('mypage/ai_model.html', pagination={'records': []})
+    # ════════════════════════════════════════
+    # 프로필 이미지
+    # ════════════════════════════════════════
 
-# AI 분석 결과 확인
-@mypage_bp.route('/download_report/<int:analysis_id>')
-@login_required
-def download_ai_report(analysis_id):
-    try:
-        # 1. DB에서 데이터 조회
-        sql = "SELECT filename, boar_count, water_deer_count, racoon_count FROM ai_analysis WHERE id = %s"
-        result = fetch_query(sql, (analysis_id,))
+    def upload_profile_image(self, user_id: int, file: FileStorage) -> str:
+        """프로필 이미지 업로드 후 URL 반환"""
+        if not file or file.filename == '':
+            raise ValueError("선택된 파일이 없습니다.")
 
-        if not result:
-            return "파일을 찾을 수 없습니다.", 404
+        if not AllowedExtension.is_image(file.filename):
+            raise ValueError("이미지 파일만 업로드 가능합니다.")
 
-        # 2. 데이터 추출 (딕셔너리/튜플 모두 대응)
-        row = result[0]
-        if isinstance(row, dict):
-            fname = row.get('filename') or "무제_분석결과"
-            boar = row.get('boar_count', 0)
-            deer = row.get('water_deer_count', 0)
-            racoon = row.get('racoon_count', 0)
-        else:
-            fname = row[0] or "무제_분석결과"
-            boar = row[1]
-            deer = row[2]
-            racoon = row[3]
+        file_url = upload_file(file, folder=f"user_profiles/{user_id}")
+        if not file_url:
+            raise RuntimeError("파일 업로드에 실패했습니다.")
 
-        # 3. 리포트 텍스트 내용 작성 (변수명 통일: fname, boar, deer, racoon)
-        content = (
-            f"AI 분석 결과 보고서\n"
-            f"====================\n"
-            f"파일명: {fname}\n"
-            f"멧돼지: {boar}마리\n"
-            f"고라니: {deer}마리\n"
-            f"너구리: {racoon}마리\n"
-            f"====================\n"
-            f"분석 일시: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        self.member_repo.update_profile_img(user_id, file_url)
+        return file_url
+
+    def delete_profile_image(self, user_id: int):
+        """프로필 이미지 삭제 (NULL로 업데이트)"""
+        self.member_repo.update_profile_img(user_id, None)
+
+    # ════════════════════════════════════════
+    # 나의 활동
+    # ════════════════════════════════════════
+
+    def get_my_activity(self, user_id: int, page: int = 1) -> dict:
+        """나의 활동 전체 데이터 일괄 반환"""
+        per_page = 10
+        my_posts, total_count = self.activity_repo.find_my_posts(user_id, page, per_page)
+        total_pages = math.ceil(total_count / per_page) if total_count else 1
+
+        return {
+            'my_posts':    my_posts,
+            'my_likes':    self.activity_repo.find_my_likes(user_id),
+            'my_scraps':   self.activity_repo.find_my_scraps(user_id),
+            'my_comments': self.activity_repo.find_my_comments(user_id),
+            'my_trash':    self.activity_repo.find_my_trash(user_id),
+            'my_blocks':   self.activity_repo.find_my_blocks(user_id),
+            'pagination': {
+                'page':        page,
+                'total_pages': total_pages,
+                'has_prev':    page > 1,
+                'has_next':    page < total_pages,
+                'prev_num':    page - 1,
+                'next_num':    page + 1,
+            }
+        }
+
+    def unblock_user(self, blocker_id: int, blocked_id: int):
+        """차단 해제"""
+        self.activity_repo.unblock(blocker_id, blocked_id)
+
+    # ════════════════════════════════════════
+    # 회원 탈퇴
+    # ════════════════════════════════════════
+
+    def delete_account(self, user_id: int):
+        """회원 탈퇴 (soft delete)"""
+        member = self.member_repo.find_by_id(user_id)
+        if not member:
+            raise ValueError("존재하지 않는 사용자입니다.")
+        self.member_repo.deactivate(user_id)
+
+    # ════════════════════════════════════════
+    # AI 분석 결과
+    # ════════════════════════════════════════
+
+    def save_ai_result(
+        self,
+        user_id: int,
+        file: FileStorage,
+        original_filename: str,
+        boar_count: int,
+        water_deer_count: int,
+        racoon_count: int,
+    ) -> str:
+        """AI 분석 결과 저장 후 이미지 URL 반환"""
+        if not file:
+            raise ValueError("파일이 없습니다.")
+
+        result_url = upload_file(file, folder="results")
+        if not result_url:
+            raise RuntimeError("업로드된 URL을 찾을 수 없습니다.")
+
+        self.activity_repo.create_ai_result(
+            user_id          = user_id,
+            filename         = original_filename or '무제_분석결과',
+            image_url        = result_url,
+            boar_count       = boar_count,
+            water_deer_count = water_deer_count,
+            racoon_count     = racoon_count,
         )
+        return result_url
 
-        # 4. 한글 파일명 깨짐 방지 인코딩
-        quoted_filename = urllib.parse.quote(f"{fname}.txt")
+    def get_ai_results(self, user_id: int, page: int = 1) -> dict:
+        """AI 분석 결과 목록 + 페이지네이션"""
+        per_page = 5
+        items, total_count = self.activity_repo.find_ai_results(user_id, page, per_page)
+        total_pages = math.ceil(total_count / per_page) if total_count else 1
 
-        response = make_response(content)
-        # RFC 5987 표준에 따라 filename* 사용 (한글 완벽 지원)
-        response.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quoted_filename}"
-        response.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return {
+            'records':     items,
+            'page':        page,
+            'total_pages': total_pages,
+            'has_prev':    page > 1,
+            'has_next':    page < total_pages,
+            'prev_num':    page - 1,
+            'next_num':    page + 1,
+        }
 
-        return response
+    def get_ai_report(self, analysis_id: int, user_id: int) -> AIAnalysis:
+        """AI 분석 보고서 다운로드용 단건 조회"""
+        result = self.activity_repo.find_ai_result_by_id(analysis_id)
+        if not result:
+            raise ValueError("파일을 찾을 수 없습니다.")
+        if not result.is_owned_by(user_id):
+            raise PermissionError("본인의 분석 결과만 다운로드할 수 있습니다.")
+        return result
 
-    except Exception as e:
-        print(f"--- [DOWNLOAD ERROR] {e} ---")
-        return f"다운로드 중 오류가 발생했습니다: {str(e)}", 500
-
-# AI 분석 결과 삭제
-@mypage_bp.route('/delete_ai_result/<int:analysis_id>')
-@login_required
-def delete_ai_result(analysis_id):
-    user_id = session.get('user_id')
-    try:
-        # 본인 데이터인지 확인 후 삭제
-        sql = "DELETE FROM ai_analysis WHERE id = %s AND user_id = %s"
-        execute_query(sql, (analysis_id, user_id))
-        return redirect(url_for('mypage.ai_results'))
-    except Exception as e:
-        print(f"삭제 중 오류: {e}")
-        return "<script>alert('삭제 중 오류가 발생했습니다.'); history.back();</script>"
+    def delete_ai_result(self, analysis_id: int, user_id: int):
+        """AI 분석 결과 삭제"""
+        result = self.activity_repo.find_ai_result_by_id(analysis_id)
+        if not result:
+            raise ValueError("존재하지 않는 분석 결과입니다.")
+        if not result.is_owned_by(user_id):
+            raise PermissionError("본인의 분석 결과만 삭제할 수 있습니다.")
+        self.activity_repo.delete_ai_result(analysis_id, user_id)
