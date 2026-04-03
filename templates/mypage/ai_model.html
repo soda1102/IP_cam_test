@@ -194,8 +194,13 @@ async function deleteResult(analysisId) {
     if (!confirm('이 분석 결과를 삭제하겠습니까?')) return;
 
     try {
-        const res = await fetch(`/mypage/delete_ai_result/${analysisId}`);
-        if (res.ok || res.redirected) {
+        const res  = await fetch(`/mypage/delete_ai_result/${analysisId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+
+        if (data.success) {
             const item = document.getElementById(`item-${analysisId}`);
             item.style.transition = 'opacity 0.3s';
             item.style.opacity    = '0';
@@ -204,7 +209,7 @@ async function deleteResult(analysisId) {
                 if (!document.querySelector('.activity-item')) location.reload();
             }, 300);
         } else {
-            alert('삭제 실패');
+            alert('삭제 실패: ' + (data.message || ''));
         }
     } catch (err) {
         console.error(err);

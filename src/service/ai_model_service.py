@@ -95,18 +95,14 @@ class AIModelService:
     # ════════════════════════════════════════
 
     def analyze_and_save_video(
-        self,
-        user_id: int,
-        file: FileStorage,
-        original_filename: str,
-        boar_count: int,
-        water_deer_count: int,
-        racoon_count: int,
+            self,
+            user_id: int,
+            file: FileStorage,
+            original_filename: str,
+            boar_count: int,
+            water_deer_count: int,
+            racoon_count: int,
     ) -> dict:
-        """
-        영상 YOLO 분석 → 압축 → Cloudinary 업로드 → DB 저장
-        Returns: {'url': str, 'message': str}
-        """
         if not file:
             raise ValueError("파일이 없습니다.")
 
@@ -114,24 +110,30 @@ class AIModelService:
         os.makedirs(save_dir, exist_ok=True)
         os.makedirs('static/temp', exist_ok=True)
 
-        now_str    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        ext        = os.path.splitext(file.filename)[1].lower() or '.mp4'
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        ext = os.path.splitext(file.filename)[1].lower() or '.mp4'
         temp_input = os.path.join('static', 'temp', f"temp_{now_str}{ext}")
         file.save(temp_input)
 
-        local_path      = None
+        local_path = None
         compressed_path = None
 
         try:
             # 1. YOLO 분석
             local_path = self.detector.predict_video(
-                source_path = temp_input,
-                save_dir    = save_dir,
-                name        = now_str,
-                conf        = 0.25,
+                source_path=temp_input,
+                save_dir=save_dir,
+                name=now_str,
+                conf=0.25,
             )
 
-            # 2. 용량 확인 후 압축
+            # 2. 서버에서 직접 counts 집계 ← 핵심 수정
+            counts = self.detector.count_video_detections(local_path, conf=0.25)
+            boar_count = counts.get('멧돼지', 0)
+            water_deer_count = counts.get('고라니', 0)
+            racoon_count = counts.get('너구리', 0)
+
+            # 3. 용량 확인 후 압축
             file_size_mb = os.path.getsize(local_path) / (1024 * 1024)
             upload_target = local_path
 
@@ -141,22 +143,25 @@ class AIModelService:
                 self.detector.compress_video(local_path, compressed_path, target_mb=MAX_UPLOAD_MB)
                 upload_target = compressed_path
 
-            # 3. Cloudinary 업로드
+            # 4. Cloudinary 업로드
             result_url = self._upload_to_cloudinary(upload_target)
 
-            # 4. DB 저장
+            # 5. DB 저장 (집계된 counts 사용)
             self.ai_repo.save_result(
-                user_id          = user_id,
-                original_filename= original_filename,
-                result_url       = result_url,
-                boar_count       = boar_count,
-                water_deer_count = water_deer_count,
-                racoon_count     = racoon_count,
+                user_id=user_id,
+                original_filename=original_filename,
+                result_url=result_url,
+                boar_count=boar_count,
+                water_deer_count=water_deer_count,
+                racoon_count=racoon_count,
             )
-            return {'url': result_url, 'message': '저장 완료'}
+            return {
+                'url': result_url,
+                'message': '저장 완료',
+                'counts': [boar_count, water_deer_count, racoon_count],
+            }
 
         finally:
-            # 임시 파일 정리
             for path in [temp_input, local_path, compressed_path]:
                 if path and os.path.exists(path):
                     os.remove(path)

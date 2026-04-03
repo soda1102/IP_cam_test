@@ -219,13 +219,13 @@ def download_ai_report(analysis_id):
         return f"다운로드 중 오류가 발생했습니다: {e}", 500
 
 
-@mypage_bp.route('/delete_ai_result/<int:analysis_id>')
+@mypage_bp.route('/delete_ai_result/<int:analysis_id>', methods=['POST'])
 @login_required
 def delete_ai_result(analysis_id):
     try:
         mypage_service.delete_ai_result(analysis_id, session['user_id'])
-        return redirect(url_for('mypage.ai_results'))
+        return jsonify({'success': True})
     except (ValueError, PermissionError) as e:
-        return f"<script>alert('{e}'); history.back();</script>"
+        return jsonify({'success': False, 'message': str(e)}), 403
     except Exception as e:
-        return "<script>alert('삭제 중 오류가 발생했습니다.'); history.back();</script>"
+        return jsonify({'success': False, 'message': '삭제 중 오류가 발생했습니다.'}), 500

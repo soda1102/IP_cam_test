@@ -258,3 +258,31 @@ class YoloDetector:
         img_result = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
         _, buffer = cv2.imencode('.jpg', img_result, [cv2.IMWRITE_JPEG_QUALITY, 90])
         return buffer.tobytes()
+
+    def count_video_detections(self, video_path: str, conf: float = 0.25) -> dict:
+        """
+        영상 전체 프레임에서 탐지된 개체 수 누적 합산
+        예) 1fr: 고라니1 멧돼지1, 2fr: 고라니1, 3fr: 너구리1
+            → 고라니:2, 멧돼지:1, 너구리:1
+        """
+        cap = cv2.VideoCapture(video_path)
+        total_counts = {v: 0 for v in LABEL_MAP.values()}
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            results = self.model.predict(frame, conf=conf, save=False, verbose=False)
+
+            for r in results:
+                for box in r.boxes:
+                    cls_id = int(box.cls[0])
+                    eng_label = self.model.names[cls_id]
+                    kor_label = LABEL_MAP.get(eng_label, eng_label)
+                    if kor_label in total_counts:
+                        total_counts[kor_label] += 1  # 개체 하나씩 누적
+
+        cap.release()
+        print(f"📊 누적 탐지 수 — {total_counts}")
+        return total_counts
