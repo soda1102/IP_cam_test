@@ -152,7 +152,7 @@ class ActivityRepository:
             """
             SELECT id, filename, boar_count, water_deer_count, racoon_count, created_at
             FROM ai_analysis
-            WHERE user_id = %s
+            WHERE user_id = %s AND active = 1
             ORDER BY created_at DESC
             LIMIT %s OFFSET %s
             """,
@@ -201,8 +201,8 @@ class ActivityRepository:
         )
 
     def delete_ai_result(self, analysis_id: int, user_id: int):
-        """본인 데이터만 삭제"""
+        """본인 데이터만 비활성화"""
         execute_query(
-            "DELETE FROM ai_analysis WHERE id = %s AND user_id = %s",
+            "UPDATE ai_analysis SET active = 0 WHERE id = %s AND user_id = %s",
             (analysis_id, user_id)
         )
