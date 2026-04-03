@@ -155,10 +155,44 @@ class YoloDetector:
 
         # ✅ now_str 새로 생성하지 않고 name 그대로 사용 → temp_key와 일치
         ext = os.path.splitext(target_file)[1]
-        local_path = os.path.join(save_dir, f"detection_{name}{ext}")
+        local_path = os.path.join(save_dir, f"detection_{name}.mp4")
 
         shutil.move(target_full_path, local_path)
         shutil.rmtree(yolo_output_dir)
 
         print(f"✅ 분석 완료 및 저장: {local_path}")
         return local_path
+
+    def compress_video(self, input_path: str, output_path: str, target_mb: int = 8) -> str:
+        """
+        OpenCV로 영상 화질을 낮춰 용량 압축
+        target_mb 이하가 될 때까지 품질을 낮춤
+        Returns: 압축된 파일 경로
+        """
+        cap = cv2.VideoCapture(input_path)
+        fps = cap.get(cv2.CAP_PROP_FPS) or 24
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # 해상도 스케일 (720p 초과면 720p로 줄임)
+        scale = min(1.0, 720 / max(height, 1))
+        new_w = int(width * scale) // 2 * 2
+        new_h = int(height * scale) // 2 * 2
+
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (new_w, new_h))
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if scale < 1.0:
+                frame = cv2.resize(frame, (new_w, new_h))
+            out.write(frame)
+
+        cap.release()
+        out.release()
+
+        file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
+        print(f"📦 압축 완료: {file_size_mb:.1f}MB → {output_path}")
+        return output_path

@@ -14,57 +14,101 @@
         <hr class="mx-auto" style="width: 60px; height: 4px; background-color: #20828a; opacity: 1;">
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
         <div class="col-lg-8">
             <div class="video-box-main shadow-sm" id="streamContainer">
-                <img id="videoStream" src="">
-                <video id="videoPlayer" muted playsinline></video>
 
-                <div id="playBtn" class="play-overlay">
-                    <i id="playIcon" class="bi bi-play-circle-fill"></i>
-                </div>
+                <!-- 이미지 분석용 -->
+                <img id="videoStream"
+                     src=""
+                     class="media-element"
+                     style="display:none;">
 
+                <!-- 영상 재생용 (분석 완료 후 표시) -->
+                <video id="videoPlayer"
+                       class="media-element"
+                       style="display:none;"
+                       playsinline
+                       controls>
+                </video>
+
+                <!-- 분석 중 썸네일 -->
+                <img id="videoThumbnail"
+                     src=""
+                     class="media-element"
+                     style="display:none;">
+
+                <!-- 바운딩박스 캔버스 -->
                 <canvas id="overlayCanvas"></canvas>
+
+                <!-- 기본 안내 -->
                 <div id="placeholderUI" class="text-center">
                     <i class="bi bi-camera-video text-muted" style="font-size: 3rem;"></i>
                     <p class="mt-3 text-muted">미리보기 영역</p>
                 </div>
-            </div>
-            <div class="progress progress-custom shadow-sm">
-                <div id="analysisProgress" class="progress-bar progress-bar-striped progress-bar-animated"
-                     role="progressbar" style="width: 0%; background-color: #20828A;"></div>
-            </div>
-            <p id="statusText" class="text-center mt-2 small text-muted"><br>현재 분석 대기 중</p>
-        </div>
 
-        <div class="col-lg-4">
-            <div class="info-card shadow-sm mb-4">
-                <form id="uploadForm">
-                    <input type="file" id="videoFile" class="d-none" accept="video/*, image/*" onclick="this.value=null;">
-                    <button type="button" class="btn btn-teal w-100 py-3 mb-3" onclick="document.getElementById('videoFile').click()">
-                        <i class="bi bi-folder2-open me-2"></i> 파일 첨부
-                    </button>
-                    <button type="submit" id="startBtn" class="btn btn-outline-secondary w-100 py-2" disabled>
-                        분석 및 재생 시작
-                    </button>
-
-                    <button type="button" id="saveCloudBtn" class="btn w-100 py-2 mt-2" disabled
-                            style="font-weight: 600; color: #20828A; border: 2px solid #20828A; transition: 0.3s;"
-                            onmouseover="this.style.backgroundColor='#20828A'; this.style.color='white';"
-                            onmouseout="this.style.backgroundColor='transparent'; this.style.color='#20828A';">
-                        <i class="bi bi-cloud-upload me-2"></i> 분석 결과 클라우드 저장
-                    </button>
-                </form>
-                <div class="mt-4">
-                    <h3 class="h6 fw-bold border-bottom pb-2 mb-3">탐지된 객체 리스트</h3>
-                    <div id="detectionList" class="overflow-auto" style="max-height: 120px;">
-                        <p class="text-muted small mb-0">분석을 시작하면 목록이 표시됩니다.</p>
-                    </div>
+                <!-- 분석 중 오버레이 -->
+                <div id="analyzingOverlay"
+                     style="display:none; position:absolute; inset:0;
+                            background:rgba(0,0,0,0.55); z-index:30;
+                            align-items:center; justify-content:center;
+                            flex-direction:column; color:white; text-align:center;">
+                    <div class="spinner-border text-light mb-3"
+                         style="width:3rem; height:3rem;"></div>
+                    <p class="fw-bold fs-5 mb-1">AI 분석 중...</p>
+                    <p class="small opacity-75">잠시만 기다려 주세요</p>
                 </div>
             </div>
-            <div class="info-card shadow-sm">
-                <h3 class="h6 fw-bold mb-3">객체 탐지 통계</h3>
-                <canvas id="statChart" height="250"></canvas>
+
+            <div class="progress progress-custom shadow-sm">
+                <div id="analysisProgress"
+                     class="progress-bar progress-bar-striped progress-bar-animated"
+                     role="progressbar"
+                     style="width: 0%; background-color: #20828A;">
+                </div>
+            </div>
+            <p id="statusText" class="text-center mt-2 small text-muted">
+                <br>현재 분석 대기 중
+            </p>
+
+            <!-- 파일 첨부 / 분석 버튼 -->
+            <div class="info-card shadow-sm mt-4">
+                <form id="uploadForm">
+                    <input type="file" id="videoFile" class="d-none"
+                           accept="video/*, image/*" onclick="this.value=null;">
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-teal flex-fill py-2"
+                                onclick="document.getElementById('videoFile').click()">
+                            <i class="bi bi-folder2-open me-2"></i> 파일 첨부
+                        </button>
+
+                        <button type="submit" id="startBtn"
+                                class="btn btn-outline-secondary flex-fill py-2"
+                                disabled>
+                            <i class="bi bi-play-fill me-1"></i> 분석 시작
+                        </button>
+                    </div>
+
+                    <!-- 분석 완료 후 표시 -->
+                    <div id="resultArea" style="display:none;">
+                        <hr class="my-3">
+                        <p class="text-success small text-center mb-2">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            분석 결과가 자동 저장되었습니다.
+                        </p>
+                        <a id="savedLink" href="#" target="_blank"
+                           class="btn w-100 py-2"
+                           style="font-weight:600; color:#20828A;
+                                  border:2px solid #20828A; transition:0.3s;"
+                           onmouseover="this.style.backgroundColor='#20828A';
+                                        this.style.color='white';"
+                           onmouseout="this.style.backgroundColor='transparent';
+                                       this.style.color='#20828A';">
+                            <i class="bi bi-download me-2"></i> 결과 다운로드
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -73,7 +117,5 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script src="{{ url_for('static', filename='js/ai_model/model.js') }}"></script>
-
 {% endblock %}
