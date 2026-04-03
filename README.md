@@ -102,11 +102,71 @@ project-root/
 
 본 프로젝트는 **Clean Architecture** 원칙을 적용하여 레이어를 분리했습니다.
 
-```
-Controller  →  Service  →  Repository  →  Domain
-                ↓
-         Infrastructure
-          (YOLO, Cloudinary)
+```mermaid
+flowchart TD
+    Client["🌐 브라우저\n(HTML / CSS / JS)"]
+
+    subgraph Controller["Controller Layer — HTTP 변환 전담"]
+        C1[auth_controller]
+        C2[board_controller]
+        C3[mypage_controller]
+        C4[profile_controller]
+        C5[admin_controller]
+        C6[ai_model_controller]
+        C7[faq_controller]
+        C8[tip_controller]
+        C9[introduce_controller]
+    end
+
+    subgraph Service["Service Layer — 비즈니스 로직 전담"]
+        S1[auth_service]
+        S2[board_service]
+        S3[mypage_service]
+        S4[profile_service]
+        S5[admin_service]
+        S6[ai_model_service]
+        S7[faq_service]
+        S8[tip_service]
+        S9[introduce_service]
+    end
+
+    subgraph Repository["Repository Layer — DB 접근 전담"]
+        R1[member_repository]
+        R2[board_repository]
+        R3[like_repository]
+        R4[comment_repository]
+        R5[file_repository]
+        R6[report_repository]
+        R7[scrap_repository]
+        R8[activity_repository]
+        R9[admin_repository]
+    end
+
+    subgraph Domain["Domain Layer — 엔티티 + 비즈니스 규칙 (의존성 제로)"]
+        D1[Board]
+        D2[Comment]
+        D3[File]
+        D4[Report]
+        D5[Scrap]
+        D6[Member]
+        D7[FAQ]
+        D8[AIAnalysis]
+    end
+
+    subgraph Infrastructure["Infrastructure — 외부 시스템 어댑터"]
+        I1[YoloDetector\nYOLOv11]
+        I2[storage.py\nCloudinary]
+        I3[(TiDB / MySQL)]
+    end
+
+    Client -->|HTTP Request/Response| Controller
+    Controller --> Service
+    Service --> Repository
+    Repository --> Domain
+    Service -.->|비즈니스 규칙 사용| Domain
+    Service -.->|YOLO 추론| I1
+    Service -.->|파일 업로드| I2
+    Repository -->|SQL| I3
 ```
 
 ### 레이어별 책임
