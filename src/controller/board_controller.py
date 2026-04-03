@@ -13,7 +13,7 @@ board_service = BoardService()
 @board_bp.route('/write', methods=['GET', 'POST'])
 def board_write():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     if request.method == 'GET':
         current_category = request.args.get('category', 'free')
@@ -82,7 +82,7 @@ def board_view(board_id):
 @board_bp.route('/edit/<int:board_id>', methods=['GET', 'POST'])
 def board_edit(board_id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     if request.method == 'GET':
         # 수정 폼 진입 — 권한 확인은 Service에서
@@ -112,7 +112,7 @@ def board_edit(board_id):
 @board_bp.route('/delete/<int:board_id>')
 def board_delete(board_id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     try:
         msg = board_service.delete_board(
@@ -300,7 +300,7 @@ def upload_image():
 @board_bp.route('/trash')
 def board_trash():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     posts = board_service.get_trash(session['user_id'])
     return render_template('board/trash.html', posts=posts)
@@ -309,7 +309,7 @@ def board_trash():
 @board_bp.route('/restore/<int:board_id>')
 def board_restore(board_id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     try:
         board_service.restore_board(board_id, session['user_id'])
@@ -322,7 +322,7 @@ def board_restore(board_id):
 @board_bp.route('/permanent_delete/<int:board_id>')
 def board_permanent_delete(board_id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     try:
         board_service.permanent_delete(board_id, session['user_id'])
