@@ -5,6 +5,25 @@
 
 ---
 
+## 🛠 기술 스택
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=flat&logo=flask&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+![YOLOv11](https://img.shields.io/badge/YOLOv11-00FFFF?style=flat&logo=yolo&logoColor=black)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=flat&logo=cloudinary&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=flat&logo=bootstrap&logoColor=white)
+
+## 👥 팀원
+
+| 이름      | 역할     | 담당 기능                 |
+|---------|--------|-----------------------|
+| 여민엽     | -      | 소개, 신고, 도움말, AI 모델 개발 |
+| 김소현     | -      | 게시판 (도란도란)            |
+| 심유경     | -      | 마이페이지, 로그인, 회원가입      |
+| 안건우     | 부조장    | 관리자 페이지, AI 모델 개발     |
+ | **장은재** | **조장** | 프로젝트 총괄, _문서화_        | 
+
 ## 📁 프로젝트 구조 (Project Structure)
 
 ```
