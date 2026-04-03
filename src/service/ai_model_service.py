@@ -91,11 +91,12 @@ class AIModelService:
 
             # DB 저장
             self.ai_repo.save_result(
-                user_id          = user_id,
-                result_url       = result_url,
-                boar_count       = boar_count,
-                water_deer_count = water_deer_count,
-                racoon_count     = racoon_count,
+                user_id=user_id,
+                original_filename=original_filename,
+                result_url=result_url,
+                boar_count=boar_count,
+                water_deer_count=water_deer_count,
+                racoon_count=racoon_count,
             )
             return result_url
 

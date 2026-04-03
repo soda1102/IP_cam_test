@@ -298,9 +298,13 @@ if(saveCloudBtn) {
     saveCloudBtn.onclick = async function() {
         if(!currentFile) return;
 
+        let customName = prompt("저장할 분석 결과의 이름을 입력해주세요:", currentFile.name);
+        if (customName === null) return;
+        if (customName.trim() === "") customName = currentFile.name;
+
         const isVideo = currentFile.type.startsWith('video/');
         const formData = new FormData();
-        formData.append('original_filename', currentFile.name);
+        formData.append('original_filename', customName);
         formData.append('boar_count', totalCounts[0]);
         formData.append('water_deer_count', totalCounts[1]);
         formData.append('racoon_count', totalCounts[2]);
