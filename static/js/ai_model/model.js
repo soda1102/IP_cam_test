@@ -1,6 +1,7 @@
 let totalCounts = [0, 0, 0];
 const labels = ['멧돼지', '고라니', '너구리'];
 let statChart = null;
+let currentTempKey = null;
 
 function initChart() {
     const ctx = document.getElementById('statChart').getContext('2d');
@@ -39,11 +40,12 @@ let analysisLoop = null;
 let lastResult = null;
 let isAnalysisActive = false;
 let currentFile = null;
-let isProcessing = false; // [추가] 현재 분석이 진행 중인지 확인하는 플래그
+let isProcessing = false;
 
 fileInput.onchange = function() {
     if(this.files && this.files.length > 0) {
         currentFile = this.files[0];
+        currentTempKey = null;
         stopAnalysis();
         resetData();
         const fileURL = URL.createObjectURL(currentFile);
@@ -109,7 +111,6 @@ function startAnalysis() {
     if (analysisLoop) return;
     isAnalysisActive = true;
 
-    // [추가] 분석 시작 시 영상 속도를 0.5배속으로 늦춤 (지연 현상 보정용)
     if (videoPlayer) {
         videoPlayer.playbackRate = 0.8;
     }
@@ -121,16 +122,20 @@ function startAnalysis() {
     }, 500);
 }
 
-// [추가] 분석이 완전히 끝났을 때 속도를 다시 1.0으로 복구하는 부분
+// ════════════════════════════════════════
+// 영상 종료 시: 프레임 분석 마무리 + 저장 버튼 활성화만
+// analyze_video는 저장 버튼 클릭 시 호출
+// ════════════════════════════════════════
 videoPlayer.onended = () => {
-    videoPlayer.playbackRate = 1.0; // 속도 복구
+    videoPlayer.playbackRate = 1.0;
+
     if (isAnalysisActive) {
         stopAnalysis();
         progressBar.style.transition = 'width 0.3s ease-in-out';
         progressBar.style.width = "100%";
-        statusText.innerText = "분석 완료!";
+        statusText.innerText = "분석 완료! 저장 버튼을 눌러 결과를 저장하세요.";
         progressBar.classList.remove('progress-bar-animated');
-        if(saveCloudBtn) saveCloudBtn.disabled = false;
+        if (saveCloudBtn) saveCloudBtn.disabled = false;
     } else {
         playBtn.style.display = 'block';
         playIcon.className = 'bi bi-play-circle-fill';
@@ -143,6 +148,7 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
     if (!file) return;
 
     resetData();
+    currentTempKey = null;
     isAnalysisActive = true;
     if(saveCloudBtn) saveCloudBtn.disabled = true;
 
@@ -175,26 +181,11 @@ document.getElementById('uploadForm').onsubmit = async function(e) {
     }, 10);
 };
 
-videoPlayer.onended = () => {
-    if (isAnalysisActive) {
-        stopAnalysis();
-        progressBar.style.transition = 'width 0.3s ease-in-out';
-        progressBar.style.width = "100%";
-        statusText.innerText = "분석 완료!";
-        progressBar.classList.remove('progress-bar-animated');
-        if(saveCloudBtn) saveCloudBtn.disabled = false;
-    } else {
-        playBtn.style.display = 'block';
-        playIcon.className = 'bi bi-play-circle-fill';
-    }
-};
-
 function analyzeFrame(mediaElement) {
     return new Promise((resolve) => {
         isProcessing = true;
         const tempCanvas = document.createElement('canvas');
 
-        // [수정] 640px도 무겁습니다. CPU 환경이면 320px까지 줄여보세요.
         const scale = Math.min(1, 320 / Math.max(mediaElement.videoWidth || mediaElement.naturalWidth, 1));
 
         tempCanvas.width = (mediaElement.videoWidth || mediaElement.naturalWidth) * scale;
@@ -212,14 +203,13 @@ function analyzeFrame(mediaElement) {
                 if (result.success) {
                     lastResult = result.detections;
                     accumulateData(result);
-                    drawBoundingBoxes(result.detections); // 좌표는 비율(xyxyn)이므로 작게 보내도 박스 위치는 맞습니다.
                 }
             } catch (err) { console.error(err); }
             finally {
                 isProcessing = false;
                 resolve();
             }
-        }, 'image/jpeg', 0.4); // 압축률도 더 낮춤
+        }, 'image/jpeg', 0.4);
     });
 }
 
@@ -294,6 +284,9 @@ function drawBoundingBoxes(detections) {
 
 window.addEventListener('resize', () => { if (lastResult) drawBoundingBoxes(lastResult); });
 
+// ════════════════════════════════════════
+// 저장 버튼 - 클릭 시 analyze_video → save_result 순서로 처리
+// ════════════════════════════════════════
 if(saveCloudBtn) {
     saveCloudBtn.onclick = async function() {
         if(!currentFile) return;
@@ -303,60 +296,67 @@ if(saveCloudBtn) {
         if (customName.trim() === "") customName = currentFile.name;
 
         const isVideo = currentFile.type.startsWith('video/');
-        const formData = new FormData();
-        formData.append('original_filename', customName);
-        formData.append('boar_count', totalCounts[0]);
-        formData.append('water_deer_count', totalCounts[1]);
-        formData.append('racoon_count', totalCounts[2]);
-
-        if (isVideo) {
-            formData.append('merged_image', currentFile);
-            statusText.innerText = "전체 영상 분석 및 저장 중... 잠시만 기다려 주세요.";
-        } else {
-            const media = videoStream;
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = media.naturalWidth;
-            tempCanvas.height = media.naturalHeight;
-            const ctx = tempCanvas.getContext('2d');
-            ctx.drawImage(media, 0, 0, tempCanvas.width, tempCanvas.height);
-            ctx.drawImage(overlayCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-
-            const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.9));
-            formData.append('merged_image', blob, 'result.jpg');
-            statusText.innerText = "결과 이미지 저장 중...";
-        }
-
         const originalBtnText = saveCloudBtn.innerHTML;
         saveCloudBtn.disabled = true;
         saveCloudBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>처리 중...';
 
         try {
-            const response = await fetch("/model/save_result", {
-                method: 'POST',
-                body: formData
-            });
+            // ── 영상: 저장 버튼 클릭 시 analyze_video 호출 ──
+            if (isVideo) {
+                statusText.innerText = "영상 후처리 중... 잠시만 기다려 주세요.";
+                const fd = new FormData();
+                fd.append('file', currentFile);
+                const analyzeRes = await fetch('/model/analyze_video', { method: 'POST', body: fd });
+                const analyzeData = await analyzeRes.json();
+
+                if (!analyzeData.success) {
+                    alert("영상 분석 실패: " + (analyzeData.message || "알 수 없는 오류"));
+                    return;
+                }
+                currentTempKey = analyzeData.temp_key;
+            }
+
+            // ── save_result 호출 ──
+            const formData = new FormData();
+            formData.append('original_filename', customName);
+            formData.append('boar_count', totalCounts[0]);
+            formData.append('water_deer_count', totalCounts[1]);
+            formData.append('racoon_count', totalCounts[2]);
+
+            if (isVideo) {
+                formData.append('temp_key', currentTempKey);
+                statusText.innerText = "결과 저장 중...";
+            } else {
+                const media = videoStream;
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = media.naturalWidth;
+                tempCanvas.height = media.naturalHeight;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(media, 0, 0, tempCanvas.width, tempCanvas.height);
+                ctx.drawImage(overlayCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+                formData.append('merged_image', blob, 'result.jpg');
+                statusText.innerText = "결과 이미지 저장 중...";
+            }
+
+            const response = await fetch("/model/save_result", { method: 'POST', body: formData });
             const resData = await response.json();
 
-                if (resData.success && resData.url) {
+            if (resData.success && resData.url) {
                 alert("성공적으로 저장되었습니다!");
-
-                // [수정] 단순히 URL을 여는 게 아니라 '다운로드' 속성을 부여함
                 const link = document.createElement('a');
                 link.href = resData.url;
-
-                // 파일명 지정 (Cloudinary URL의 경우 브라우저 보안 정책상 이름 지정이 안 될 수 있으나 시도)
                 const downloadName = isVideo ? `result_${customName}.mp4` : `result_${customName}.jpg`;
                 link.setAttribute('download', downloadName);
-
                 link.target = '_blank';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
                 statusText.innerText = "저장 및 다운로드 완료!";
             } else {
                 alert("저장 실패: " + (resData.message || "URL을 받아오지 못했습니다."));
             }
+
         } catch (err) {
             console.error(err);
             alert("서버 통신 오류가 발생했습니다.");
