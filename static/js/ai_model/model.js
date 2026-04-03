@@ -254,44 +254,70 @@ async function handleVideo() {
 // ════════════════════════════════════════
 function drawBoundingBoxes(detections) {
     const media = videoStream;
-    if (!media.clientWidth) return;
+    if (!media.clientWidth || !media.naturalWidth) return;
 
-    const mW = media.clientWidth,  mH = media.clientHeight;
-    const nW  = media.naturalWidth  || mW;
-    const nH  = media.naturalHeight || mH;
-    const ratio          = nW / nH;
+    const container = document.getElementById('streamContainer');
+    const containerRect = container.getBoundingClientRect();
+    const mediaRect     = media.getBoundingClientRect();
+
+    // 실제 렌더링된 이미지 크기 (object-fit: contain 적용 후)
+    const nW    = media.naturalWidth;
+    const nH    = media.naturalHeight;
+    const mW    = media.clientWidth;
+    const mH    = media.clientHeight;
+    const ratio = nW / nH;
     const containerRatio = mW / mH;
 
-    let dW, dH;
-    if (ratio > containerRatio) { dW = mW; dH = mW / ratio; }
-    else                        { dH = mH; dW = mH * ratio; }
+    let dW, dH, offsetX, offsetY;
+    if (ratio > containerRatio) {
+        dW      = mW;
+        dH      = mW / ratio;
+        offsetX = 0;
+        offsetY = (mH - dH) / 2;
+    } else {
+        dH      = mH;
+        dW      = mH * ratio;
+        offsetX = (mW - dW) / 2;
+        offsetY = 0;
+    }
 
+    // 캔버스를 이미지 실제 렌더링 영역에 맞춤
     overlayCanvas.width  = dW;
     overlayCanvas.height = dH;
-    overlayCanvas.style.left = media.offsetLeft + (mW - dW) / 2 + 'px';
-    overlayCanvas.style.top  = media.offsetTop  + (mH - dH) / 2 + 'px';
+    overlayCanvas.style.position = 'absolute';
+    overlayCanvas.style.left     = (mediaRect.left - containerRect.left + offsetX) + 'px';
+    overlayCanvas.style.top      = (mediaRect.top  - containerRect.top  + offsetY) + 'px';
+    overlayCanvas.style.width    = dW + 'px';
+    overlayCanvas.style.height   = dH + 'px';
 
     drawCtx.clearRect(0, 0, dW, dH);
+
     detections.forEach(det => {
         if (!det.bbox || parseFloat(det.conf) < 0.4) return;
         const [x1, y1, x2, y2] = det.bbox;
-        const sx = x1 * dW, sy = y1 * dH;
-        const bw = (x2 - x1) * dW, bh = (y2 - y1) * dH;
+        const sx = x1 * dW;
+        const sy = y1 * dH;
+        const bw = (x2 - x1) * dW;
+        const bh = (y2 - y1) * dH;
 
-        drawCtx.strokeStyle = '#007BFF';
-        drawCtx.lineWidth   = 3;
+        // 박스
+        drawCtx.strokeStyle = '#00e676';
+        drawCtx.lineWidth   = 2.5;
         drawCtx.strokeRect(sx, sy, bw, bh);
 
+        // 라벨 배경
         const label    = `${det.label} ${det.conf}`;
+        drawCtx.font   = 'bold 13px Pretendard, sans-serif';
+        const textW    = drawCtx.measureText(label).width + 10;
         const labelBgH = 20;
         const labelY   = sy - labelBgH < 0 ? sy : sy - labelBgH;
-        const textW    = drawCtx.measureText(label).width + 10;
 
-        drawCtx.fillStyle = '#007BFF';
+        drawCtx.fillStyle = '#00e676';
         drawCtx.fillRect(sx, labelY, textW, labelBgH);
-        drawCtx.fillStyle = 'white';
-        drawCtx.font      = 'bold 14px Pretendard';
-        drawCtx.fillText(label, sx + 5, labelY + 15);
+
+        // 라벨 텍스트
+        drawCtx.fillStyle = '#000';
+        drawCtx.fillText(label, sx + 5, labelY + 14);
     });
 }
 

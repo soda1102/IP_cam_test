@@ -34,33 +34,33 @@ class AIModelService:
     # ════════════════════════════════════════
 
     def detect_and_save_image(
-        self,
-        user_id: int,
-        file: FileStorage,
-        original_filename: str,
-        boar_count: int,
-        water_deer_count: int,
-        racoon_count: int,
+            self,
+            user_id: int,
+            file: FileStorage,
+            original_filename: str,
+            boar_count: int,
+            water_deer_count: int,
+            racoon_count: int,
     ) -> dict:
-        """
-        이미지 탐지 + 자동 클라우드 저장
-        Returns: {'counts', 'detections', 'url'}
-        """
         if not file:
             raise ValueError("파일이 없습니다.")
 
         file_bytes = file.read()
-        detection  = self.detector.detect_from_bytes(file_bytes, conf=0.4)
 
-        # 탐지된 이미지를 로컬에 임시 저장 후 Cloudinary 업로드
-        save_dir   = os.path.join(current_app.root_path, 'static', 'results')
+        # 1. 탐지 실행
+        detection = self.detector.detect_from_bytes(file_bytes, conf=0.4)
+
+        # 2. 바운딩박스가 그려진 이미지 생성
+        annotated_bytes = self.detector.annotate_image(file_bytes, detection['detections'])
+
+        # 3. 로컬 임시 저장
+        save_dir = os.path.join(current_app.root_path, 'static', 'results')
         os.makedirs(save_dir, exist_ok=True)
-        now_str    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         local_path = os.path.join(save_dir, f"detection_{now_str}.jpg")
 
-        # 원본 bytes를 그대로 저장 (바운딩박스는 JS 캔버스에서 처리)
         with open(local_path, 'wb') as f:
-            f.write(file_bytes)
+            f.write(annotated_bytes)
 
         try:
             result_url = self._upload_to_cloudinary(local_path)
@@ -68,14 +68,14 @@ class AIModelService:
             if os.path.exists(local_path):
                 os.remove(local_path)
 
-        # DB 저장
+        # 4. DB 저장
         self.ai_repo.save_result(
-            user_id          = user_id,
-            original_filename= original_filename,
-            result_url       = result_url,
-            boar_count       = boar_count,
-            water_deer_count = water_deer_count,
-            racoon_count     = racoon_count,
+            user_id=user_id,
+            original_filename=original_filename,
+            result_url=result_url,
+            boar_count=detection['counts'][0],
+            water_deer_count=detection['counts'][1],
+            racoon_count=detection['counts'][2],
         )
 
         return {**detection, 'url': result_url}
