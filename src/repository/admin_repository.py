@@ -660,7 +660,7 @@ class AdminRepository:
                 cursor.execute(
                     """
                     SELECT id, filename, boar_count, water_deer_count,
-                           racoon_count, created_at, image_url
+                           racoon_count, created_at, image_url, active
                     FROM ai_analysis
                     WHERE user_id=%s
                     ORDER BY created_at DESC
@@ -674,3 +674,18 @@ class AdminRepository:
         except Exception as e:
             print(f"get_ai_analysis_files() 오류: {e}")
             return [], 1
+
+    def toggle_ai_file(self, file_id: int) -> bool:
+        conn = Session.get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT active FROM ai_analysis WHERE id=%s", (file_id,))
+                row = cursor.fetchone()
+                new_active = 0 if row['active'] == 1 else 1
+                cursor.execute("UPDATE ai_analysis SET active=%s WHERE id=%s", (new_active, file_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"toggle_ai_file() 오류: {e}")
+            conn.rollback()
+            return False

@@ -299,6 +299,8 @@ class AdminService:
         })
         return ctx
 
+    def toggle_ai_file(self, file_id: int):
+        self.admin_repo.toggle_ai_file(file_id)
     # ════════════════════════════════════════
     # 통계 API
     # ════════════════════════════════════════

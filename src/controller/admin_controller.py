@@ -245,6 +245,12 @@ def files_detail(user_id):
         flash(str(e), 'danger')
         return redirect(url_for('admin.files'))
 
+@admin_bp.route('/files/<int:file_id>/toggle', methods=['POST'])
+@admin_required
+def toggle_ai_file(file_id):
+    admin_service.toggle_ai_file(file_id)
+    return ('', 200) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' \
+           else redirect(url_for('admin.files'))
 
 # ════════════════════════════════════════
 # 통계 API

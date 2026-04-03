@@ -35,9 +35,10 @@
                 <tr>
                     <th style="width:60px;">번호</th>
                     <th style="width:70px;">이미지</th>
-                    <th style="text-align:left;">파일명</th>
+                    <th style="width:200px;text-align:left;">파일명</th>
                     <th style="width:200px;">탐지 결과</th>
                     <th style="width:130px;">분석일</th>
+                    <th style="width:80px;">관리</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,17 +46,24 @@
                 <tr>
                     <td>{{ f['id'] }}</td>
                     <td>
-                        {% if f['filename'] and f['filename'].startswith('http') %}
-                            <img src="{{ f['filename'] }}" class="analysis-img" alt="분석 이미지">
-                        {% elif f['image_url'] %}
-                            <img src="{{ f['image_url'] }}" class="analysis-img" alt="분석 이미지">
+                        {% set fname = f['filename'] or '' %}
+                        {% if fname.lower().endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv')) %}
+                            <div class="analysis-img-placeholder">🎬</div>
                         {% else %}
-                            <div class="analysis-img-placeholder">📄</div>
+                            <div class="analysis-img-placeholder">🖼️</div>
                         {% endif %}
                     </td>
-                    <td style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">
-                        {% if f['filename'] and f['filename'].startswith('http') %}
-                            분석 이미지
+                    <td style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        {% set media_url = f['image_url'] or '' %}
+                        {% if media_url %}
+                            <a href="#" onclick="openMediaModal('{{ media_url }}', '{{ f['filename'] }}'); return false;"
+                               style="color:var(--teal);font-weight:600;text-decoration:none;">
+                                {% if media_url.lower().endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv')) %}
+                                    🎬 {{ f['filename'] }}
+                                {% else %}
+                                    🖼️ {{ f['filename'] }}
+                                {% endif %}
+                            </a>
                         {% else %}
                             {{ f['filename'] }}
                         {% endif %}
@@ -75,10 +83,19 @@
                         {% endif %}
                     </td>
                     <td>{{ f['created_at'].strftime('%Y.%m.%d %H:%M') }}</td>
+                    <td style="text-align:center;">
+                        {% if f['active'] %}
+                            <button class="action-btn danger"
+                                    onclick="hideFile({{ f['id'] }})">숨김</button>
+                        {% else %}
+                            <button class="action-btn"
+                                    onclick="restoreFile({{ f['id'] }})">복구</button>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px">
+                    <td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px">
                         분석 파일이 없습니다.
                     </td>
                 </tr>
@@ -104,4 +121,20 @@
 </div>
 {% endif %}
 
+
+<!-- 미디어 모달 -->
+<div class="modal-overlay" id="mediaModal" onclick="if(event.target===this)closeMediaModal()">
+    <div class="modal-box" style="width:800px;max-width:95vw;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="modal-title" style="margin:0;">미디어 미리보기</div>
+            <button onclick="closeMediaModal()"
+                    style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);">✕</button>
+        </div>
+        <div id="media-content" style="text-align:center;"></div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="/static/js/admin/admin_files.js"></script>
+{% endblock %}
 {% endblock %}
