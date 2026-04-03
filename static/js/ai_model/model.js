@@ -337,15 +337,23 @@ if(saveCloudBtn) {
             });
             const resData = await response.json();
 
-            if (resData.success && resData.url) {
+                if (resData.success && resData.url) {
                 alert("성공적으로 저장되었습니다!");
+
+                // [수정] 단순히 URL을 여는 게 아니라 '다운로드' 속성을 부여함
                 const link = document.createElement('a');
                 link.href = resData.url;
+
+                // 파일명 지정 (Cloudinary URL의 경우 브라우저 보안 정책상 이름 지정이 안 될 수 있으나 시도)
+                const downloadName = isVideo ? `result_${customName}.mp4` : `result_${customName}.jpg`;
+                link.setAttribute('download', downloadName);
+
                 link.target = '_blank';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                statusText.innerText = "저장 완료! URL: " + resData.url;
+
+                statusText.innerText = "저장 및 다운로드 완료!";
             } else {
                 alert("저장 실패: " + (resData.message || "URL을 받아오지 못했습니다."));
             }

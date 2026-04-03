@@ -52,22 +52,15 @@ class AIModelService:
     # ════════════════════════════════════════
     # 결과 저장
     # ════════════════════════════════════════
-
     def save_result(
-        self,
-        user_id: int,
-        file: FileStorage,
-        original_filename: str,
-        boar_count: int,
-        water_deer_count: int,
-        racoon_count: int,
+            self,
+            user_id: int,
+            file: FileStorage,
+            original_filename: str,
+            boar_count: int,
+            water_deer_count: int,
+            racoon_count: int,
     ) -> str:
-        """
-        분석 결과 저장
-        - 이미지: 로컬 저장 → Cloudinary 업로드 → DB 저장
-        - 영상: YOLO 추론 → 로컬 저장 → Cloudinary 업로드 → DB 저장
-        Returns: Cloudinary URL
-        """
         if not file:
             raise ValueError("데이터가 없습니다.")
 
@@ -75,35 +68,30 @@ class AIModelService:
         os.makedirs(save_dir, exist_ok=True)
         os.makedirs('static/temp', exist_ok=True)
 
-        now_str    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        ext        = os.path.splitext(original_filename.lower())[1]
-        is_video   = ext in VIDEO_EXTENSIONS
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        ext = os.path.splitext(original_filename.lower())[1]
+        is_video = ext in VIDEO_EXTENSIONS
         local_path = None
 
-        try:
-            if is_video:
-                local_path = self._save_video_result(file, original_filename, save_dir, now_str)
-            else:
-                local_path = self._save_image_result(file, save_dir, now_str)
+        # [수정] try: 를 지우고 들여쓰기를 한 칸씩 앞으로 당겼습니다.
+        if is_video:
+            local_path = self._save_video_result(file, original_filename, save_dir, now_str)
+        else:
+            local_path = self._save_image_result(file, save_dir, now_str)
 
-            # Cloudinary 업로드
-            result_url = self._upload_to_cloudinary(local_path)
+        # Cloudinary 업로드
+        result_url = self._upload_to_cloudinary(local_path)
 
-            # DB 저장
-            self.ai_repo.save_result(
-                user_id=user_id,
-                original_filename=original_filename,
-                result_url=result_url,
-                boar_count=boar_count,
-                water_deer_count=water_deer_count,
-                racoon_count=racoon_count,
-            )
-            return result_url
-
-        finally:
-            # 로컬 임시 파일 정리
-            if local_path and os.path.exists(local_path):
-                os.remove(local_path)
+        # DB 저장
+        self.ai_repo.save_result(
+            user_id=user_id,
+            original_filename=original_filename,
+            result_url=result_url,
+            boar_count=boar_count,
+            water_deer_count=water_deer_count,
+            racoon_count=racoon_count,
+        )
+        return result_url
 
     # ════════════════════════════════════════
     # Private 헬퍼

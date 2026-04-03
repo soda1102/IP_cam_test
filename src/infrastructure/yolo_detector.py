@@ -107,34 +107,46 @@ class YoloDetector:
     # ════════════════════════════════════════
     # 영상 결과 저장
     # ════════════════════════════════════════
-
     def predict_video(self, source_path: str, save_dir: str, name: str, conf: float = 0.25) -> str:
         """
         영상 파일 추론 후 결과 영상 경로 반환
-        Returns: 결과 영상 로컬 경로
         """
         import os
         import shutil
         import datetime
 
-        self.model.predict(
-            source  = source_path,
-            save    = True,
-            project = save_dir,
-            name    = name,
-            conf    = conf,
+        # 1. 추론 시작 (stream=True)
+        results = self.model.predict(
+            source=source_path,
+            save=True,
+            project=save_dir,
+            name=name,
+            conf=conf,
+            stream=True  # 메모리 관리를 위해 유지
         )
 
+        # 2. [핵심] 결과를 소모시켜야 실제로 파일이 저장됩니다.
+        for _ in results:
+            pass
+
+        # 3. 결과 폴더 확인
         yolo_output_dir = os.path.join(save_dir, name)
-        files_in_dir    = os.listdir(yolo_output_dir) if os.path.exists(yolo_output_dir) else []
 
-        if not files_in_dir:
-            raise FileNotFoundError("YOLO가 결과 영상을 생성하지 못했습니다.")
+        # YOLO가 실제로 파일을 만들었는지 확인 (약간의 대기 시간을 주는 것이 안전할 때도 있음)
+        if not os.path.exists(yolo_output_dir) or not os.listdir(yolo_output_dir):
+            raise FileNotFoundError(f"YOLO가 결과 영상을 생성하지 못했습니다. 경로: {yolo_output_dir}")
 
-        now_str    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        local_path = os.path.join(save_dir, f"detection_{now_str}.mp4")
+        files_in_dir = os.listdir(yolo_output_dir)
+
+        # 4. 파일 이동 및 정리
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # 원본 확장자를 유지하기 위해 splitext 사용
+        ext = os.path.splitext(files_in_dir[0])[1]
+        local_path = os.path.join(save_dir, f"detection_{now_str}{ext}")
+
         shutil.move(os.path.join(yolo_output_dir, files_in_dir[0]), local_path)
 
+        # 임시 생성된 YOLO 폴더 삭제
         if os.path.exists(yolo_output_dir):
             shutil.rmtree(yolo_output_dir)
 
