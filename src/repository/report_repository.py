@@ -57,16 +57,10 @@ class ReportRepository:
     # ────────────────────────────────────────
     # 생성
     # ────────────────────────────────────────
-    def create(
-        self,
-        board_id: int,
-        reporter_id: int,
-        reason: str,
-    ) -> int:
-        """신고 INSERT 후 새 report_id 반환"""
+    def create(self, board_id: int, reporter_id: int, reason: str, detail: str = '') -> int:
         execute_query(
-            "INSERT INTO reports (board_id, reporter_id, reason) VALUES (%s, %s, %s)",
-            (board_id, reporter_id, reason)
+            "INSERT INTO reports (board_id, reporter_id, reason, detail) VALUES (%s, %s, %s, %s)",
+            (board_id, reporter_id, reason, detail)
         )
         row = fetch_query("SELECT LAST_INSERT_ID() AS new_id", one=True)
         return row['new_id'] if row else -1
@@ -86,4 +80,29 @@ class ReportRepository:
         execute_query(
             "DELETE FROM reports WHERE board_id = %s",
             (board_id,)
+        )
+
+    # ────────────────────────────────────────
+    # 댓글 신고
+    # ────────────────────────────────────────
+    def is_duplicate_comment(self, comment_id: int, reporter_id: int) -> bool:
+        row = fetch_query(
+            "SELECT 1 FROM comment_report WHERE comment_id = %s AND reporter_id = %s",
+            (comment_id, reporter_id), one=True
+        )
+        return row is not None
+
+    def create_comment_report(self, comment_id: int, reporter_id: int, reason: str, detail: str = '') -> int:
+        execute_query(
+            "INSERT INTO comment_report (comment_id, reporter_id, reason, detail) VALUES (%s, %s, %s, %s)",
+            (comment_id, reporter_id, reason, detail)
+        )
+        row = fetch_query("SELECT LAST_INSERT_ID() AS new_id", one=True)
+        return row['new_id'] if row else -1
+
+    def delete_by_comment_id(self, comment_id: int):
+        """댓글 hard delete 시 신고 내역 일괄 삭제"""
+        execute_query(
+            "DELETE FROM comment_report WHERE comment_id = %s",
+            (comment_id,)
         )

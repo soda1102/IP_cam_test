@@ -54,7 +54,7 @@ class BoardRepository:
         search_type: str = 'title',
         sort: str = 'latest',
         page: int = 1,
-        per_page: int = 10,
+        per_page: int = 15,
         is_admin: bool = False,
     ) -> tuple[list[Board], int]:
         """

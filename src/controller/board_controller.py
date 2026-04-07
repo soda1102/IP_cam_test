@@ -50,7 +50,7 @@ def board_list():
         search_type = request.args.get('search_type', 'title'),
         sort        = request.args.get('sort', 'latest'),
         page        = request.args.get('page', 1, type=int),
-        per_page    = request.args.get('per_page', 10, type=int),
+        per_page    = request.args.get('per_page', 15, type=int),
     )
 
     return render_template('board/list.html',
@@ -59,7 +59,7 @@ def board_list():
                            search      = request.args.get('search', ''),
                            search_type = request.args.get('search_type', 'title'),
                            sort        = request.args.get('sort', 'latest'),
-                           per_page    = request.args.get('per_page', 10, type=int),
+                           per_page    = request.args.get('per_page', 15, type=int),
                            show_pinned = request.args.get('show_pinned', 'on'))
 
 
@@ -243,24 +243,41 @@ def delete_comment(comment_id):
 # 신고
 # ════════════════════════════════════════
 
-@board_bp.route('/report/<int:board_id>', methods=['POST'])
-def board_report(board_id):
+@board_bp.route('/report', methods=['POST'])
+def board_report():
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': '로그인이 필요합니다.'}), 401
 
-    data = request.get_json()
+    data        = request.get_json()
+    report_type = data.get('type')
+    target_id   = int(data.get('target_id'))
+    reason      = data.get('reason')
+    detail      = data.get('detail', '')
+
     try:
-        board_service.report_board(
-            board_id    = board_id,
-            reporter_id = session['user_id'],
-            reason      = data.get('reason'),
-        )
+        if report_type == 'board':
+            board_service.report_board(
+                board_id    = target_id,
+                reporter_id = session['user_id'],
+                reason      = reason,
+                detail      = detail,
+            )
+        elif report_type == 'comment':
+            board_service.report_comment(
+                comment_id  = target_id,
+                reporter_id = session['user_id'],
+                reason      = reason,
+                detail      = detail,
+            )
+        else:
+            return jsonify({'success': False, 'message': '잘못된 신고 유형입니다.'}), 400
+
         return jsonify({'success': True, 'message': '신고가 접수되었습니다.'})
+
     except ValueError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
     except PermissionError as e:
         return jsonify({'success': False, 'message': str(e)}), 403
-
 
 # ════════════════════════════════════════
 # 스크랩

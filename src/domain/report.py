@@ -4,14 +4,13 @@ from typing import Optional
 
 
 class ReportReason:
-    SPAM        = 'spam'          # 스팸/홍보
-    OBSCENE     = 'obscene'       # 음란/불건전
-    ABUSE       = 'abuse'         # 욕설/혐오
-    ILLEGAL     = 'illegal'       # 불법 정보
-    PERSONAL    = 'personal'      # 개인정보 노출
-    OTHER       = 'other'         # 기타
+    SPAM     = '부적절한 홍보 게시글'
+    OBSCENE  = '음란성 내용'
+    DEFAME   = '명예훼손/저작권 침해'
+    ABUSE    = '욕설 및 비하 발언'
+    OTHER    = '기타'
 
-    _VALID = {SPAM, OBSCENE, ABUSE, ILLEGAL, PERSONAL, OTHER}
+    _VALID = {SPAM, OBSCENE, DEFAME, ABUSE, OTHER}
 
     @classmethod
     def is_valid(cls, value: str) -> bool:
@@ -19,16 +18,13 @@ class ReportReason:
 
     @classmethod
     def label(cls, value: str) -> str:
-        """한국어 라벨 반환"""
         return {
-            cls.SPAM:     '스팸/홍보',
-            cls.OBSCENE:  '음란/불건전',
-            cls.ABUSE:    '욕설/혐오',
-            cls.ILLEGAL:  '불법 정보',
-            cls.PERSONAL: '개인정보 노출',
-            cls.OTHER:    '기타',
+            cls.SPAM:    '부적절한 홍보 게시글',
+            cls.OBSCENE: '음란성 내용',
+            cls.DEFAME:  '명예훼손/저작권 침해',
+            cls.ABUSE:   '욕설 및 비하 발언',
+            cls.OTHER:   '기타',
         }.get(value, '알 수 없음')
-
 
 @dataclass
 class Report:

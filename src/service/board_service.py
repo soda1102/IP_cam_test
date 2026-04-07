@@ -85,7 +85,7 @@ class BoardService:
         search_type: str = 'title',
         sort: str = 'latest',
         page: int = 1,
-        per_page: int = 10,
+        per_page: int = 15,
     ) -> dict:
         boards, total_count = self.board_repo.find_list(
             category    = category,
@@ -229,16 +229,12 @@ class BoardService:
     # 신고
     # ════════════════════════════════════════
 
-    def report_board(
-        self,
-        board_id: int,
-        reporter_id: int,
-        reason: str,
-    ):
+    def report_board(self, board_id: int, reporter_id: int, reason: str, detail: str = ''):
         if not ReportReason.is_valid(reason):
             raise ValueError("유효하지 않은 신고 사유입니다.")
 
         board = self.board_repo.find_by_id(board_id)
+
         if not board:
             raise ValueError("존재하지 않는 게시글입니다.")
 
@@ -248,7 +244,24 @@ class BoardService:
         if self.report_repo.is_duplicate(board_id, reporter_id):
             raise ValueError("이미 신고한 글입니다.")
 
-        self.report_repo.create(board_id, reporter_id, reason)
+        self.report_repo.create(board_id, reporter_id, reason, detail)
+
+    def report_comment(self, comment_id: int, reporter_id: int, reason: str, detail: str = ''):
+        if not ReportReason.is_valid(reason):
+            raise ValueError("유효하지 않은 신고 사유입니다.")
+
+        comment = self.comment_repo.find_by_id(comment_id)
+
+        if not comment:
+            raise ValueError("존재하지 않는 댓글입니다.")
+
+        if comment.member_id == reporter_id:
+            raise PermissionError("본인 댓글은 신고할 수 없습니다.")
+
+        if self.report_repo.is_duplicate_comment(comment_id, reporter_id):
+            raise ValueError("이미 신고한 댓글입니다.")
+
+        self.report_repo.create_comment_report(comment_id, reporter_id, reason, detail)
 
     # ════════════════════════════════════════
     # 스크랩
