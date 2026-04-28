@@ -6,7 +6,7 @@ from typing import Optional
 import bleach
 from werkzeug.datastructures import FileStorage
 
-from src.domain.board import Board
+from src.domain.Board import Board
 from src.domain.file import File, AllowedExtension, MAX_FILE_SIZE
 from src.domain.report import ReportReason
 from src.repository.board_repository import BoardRepository

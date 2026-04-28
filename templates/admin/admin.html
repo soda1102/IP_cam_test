@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도(道)서관 — 관리자</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --teal: #20828A;
+            --teal-dark: #165f65;
+            --teal-light: rgba(32, 130, 138, 0.12);
+            --teal-glow: rgba(32, 130, 138, 0.25);
+            --charcoal: #212529;
+            --bg: #f0f4f5;
+            --sidebar-bg: #181e20;
+            --sidebar-w: 260px;
+            --white: #ffffff;
+            --text-muted: #6c757d;
+            --border: rgba(0,0,0,0.07);
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #27ae60;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: var(--bg);
+            color: var(--charcoal);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--sidebar-bg);
+            position: fixed;
+            top: 0; left: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            border-right: 1px solid rgba(32,130,138,0.3);
+        }
+
+        .sidebar-logo {
+            padding: 28px 24px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sidebar-logo .logo-mark {
+            width: 40px; height: 40px;
+            background: var(--teal);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+        }
+        .sidebar-logo .brand-text {
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.15rem;
+            line-height: 1.2;
+        }
+        .sidebar-logo .brand-sub {
+            font-size: 0.7rem;
+            color: var(--teal);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-section-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: rgba(255,255,255,0.25);
+            padding: 20px 24px 8px;
+            text-transform: uppercase;
+        }
+
+        .sidebar nav { flex: 1; padding: 8px 12px; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            color: rgba(255,255,255,0.6);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 2px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+        .nav-item.active {
+            background: var(--teal-light);
+            color: #fff;
+            border: 1px solid rgba(32,130,138,0.3);
+        }
+        .nav-item.active .nav-icon { color: var(--teal); }
+        .nav-icon { font-size: 1.1rem; width: 20px; text-align: center; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--teal);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .nav-badge.red { background: var(--danger); }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .admin-profile {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+        }
+        .admin-avatar {
+            width: 34px; height: 34px;
+            background: var(--teal);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+        .admin-info .name { color: #fff; font-weight: 700; font-size: 0.85rem; }
+        .admin-info .role { color: rgba(255,255,255,0.4); font-size: 0.72rem; }
+
+        /* ===== MAIN ===== */
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== TOPBAR ===== */
+        .topbar {
+            background: var(--white);
+            padding: 0 32px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0;
+            z-index: 50;
+        }
+        .topbar-title { font-weight: 800; font-size: 1.1rem; }
+        .topbar-actions { display: flex; align-items: center; gap: 12px; }
+        .topbar-btn {
+            border: 1px solid var(--border);
+            background: var(--white);
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: 'Pretendard', sans-serif;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--charcoal);
+        }
+        .topbar-btn:hover { border-color: var(--teal); color: var(--teal); }
+        .topbar-btn.primary {
+            background: var(--teal);
+            color: #fff;
+            border-color: var(--teal);
+        }
+        .topbar-btn.primary:hover { background: var(--teal-dark); border-color: var(--teal-dark); color: #fff; }
+
+        /* ===== CONTENT ===== */
+        .content { padding: 28px 32px; flex: 1; }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ===== STAT CARDS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+        .stat-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 22px 24px;
+            border: 1px solid var(--border);
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: var(--teal);
+            border-radius: 4px 0 0 4px;
+        }
+        .stat-card.danger::after { background: var(--danger); }
+        .stat-card.warning::after { background: var(--warning); }
+        .stat-card.success::after { background: var(--success); }
+        .stat-card:hover { box-shadow: 0 6px 24px var(--teal-glow); transform: translateY(-2px); }
+        .stat-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-value { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+        .stat-change { font-size: 0.78rem; font-weight: 600; }
+        .stat-change.up { color: var(--success); }
+        .stat-change.down { color: var(--danger); }
+
+        /* ===== PANEL ===== */
+        .panel {
+            background: var(--white);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .panel-head {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .panel-title { font-weight: 800; font-size: 1rem; }
+        .panel-body { padding: 0; }
+
+        /* ===== TABLE ===== */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            background: #f8fafa;
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.87rem;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #f8fffe; }
+
+        /* ===== BADGES ===== */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+        .badge-active { background: rgba(39,174,96,0.12); color: var(--success); }
+        .badge-inactive { background: rgba(108,117,125,0.12); color: var(--text-muted); }
+        .badge-pending { background: rgba(243,156,18,0.12); color: var(--warning); }
+        .badge-banned { background: rgba(231,76,60,0.12); color: var(--danger); }
+        .badge-notice { background: rgba(32,130,138,0.12); color: var(--teal); }
+        .badge-review { background: rgba(108,117,125,0.1); color: #555; }
+        .badge-high { background: rgba(231,76,60,0.12); color: var(--danger); }
+        .badge-medium { background: rgba(243,156,18,0.12); color: var(--warning); }
+        .badge-low { background: rgba(39,174,96,0.12); color: var(--success); }
+
+        /* ===== ACTION BUTTONS ===== */
+        .action-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Pretendard', sans-serif;
+            cursor: pointer;
+            transition: 0.15s;
+            color: var(--charcoal);
+            margin-right: 4px;
+        }
+        .action-btn:hover { border-color: var(--teal); color: var(--teal); }
+        .action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+        /* ===== SEARCH / FILTER BAR ===== */
+        .filter-bar {
+            display: flex; gap: 10px; margin-bottom: 20px; align-items: center;
+        }
+        .search-input {
+            flex: 1;
+            padding: 9px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Pretendard', sans-serif;
+            font-size: 0.87rem;
+            font-weight: 500;
+            background: var(--white);
+            transition: 0.2s;
+        }
+        .search-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-light); }
+        .filter-select {
+            padding: 9px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Pretendard', sans-serif;
+            font-size: 0.87rem;
+            font-weight: 500;
+            background: var(--white);
+            cursor: pointer;
+        }
+
+        /* ===== GRID 2col ===== */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+        /* ===== ALERT ITEMS ===== */
+        .alert-item {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: 0.15s;
+        }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-item:hover { background: #f8fffe; }
+        .alert-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+        .dot-red { background: var(--danger); box-shadow: 0 0 6px rgba(231,76,60,0.5); }
+        .dot-orange { background: var(--warning); }
+        .dot-teal { background: var(--teal); }
+        .alert-text { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
+        .alert-meta { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+
+        /* ===== CHART PLACEHOLDER ===== */
+        .chart-area {
+            padding: 24px;
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .bar {
+            width: 100%;
+            background: var(--teal-light);
+            border-radius: 6px 6px 0 0;
+            position: relative;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .bar:hover { background: var(--teal); }
+        .bar:hover .bar-tooltip { display: block; }
+        .bar-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        .bar-tooltip {
+            display: none;
+            position: absolute;
+            top: -30px; left: 50%; transform: translateX(-50%);
+            background: var(--charcoal);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-family: 'Pretendard', sans-serif;
+            font-weight: 600;
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 32px;
+            width: 480px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn { from { opacity:0; transform: scale(0.95) translateY(10px); } to { opacity:1; transform: scale(1) translateY(0); } }
+        .modal-title { font-weight: 800; font-size: 1.15rem; margin-bottom: 20px; }
+        .modal-field { margin-bottom: 16px; }
+        .modal-label { font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; display: block; color: var(--text-muted); }
+        .modal-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Pretendard', sans-serif;
+            font-size: 0.87rem;
+            font-weight: 500;
+        }
+        .modal-input:focus { outline: none; border-color: var(--teal); }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed; bottom: 28px; right: 28px;
+            background: var(--charcoal);
+            color: #fff;
+            padding: 14px 22px;
+            border-radius: 12px;
+            font-size: 0.87rem;
+            font-weight: 600;
+            display: flex; align-items: center; gap: 10px;
+            z-index: 9999;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-left: 4px solid var(--teal);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        /* ===== SECTION TITLE ===== */
+        .section-title { font-weight: 800; font-size: 1.35rem; margin-bottom: 6px; }
+        .section-sub { font-size: 0.87rem; color: var(--text-muted); font-weight: 500; margin-bottom: 24px; }
+
+        /* ===== HIGHLIGHT ROW ===== */
+        .row-new td { background: rgba(32,130,138,0.04); }
+
+        /* ===== RISK CARD ===== */
+        .risk-card {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 14px;
+        }
+        .risk-card:last-child { border-bottom: none; }
+        .risk-card:hover { background: #f8fffe; }
+        .risk-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .risk-info { flex: 1; }
+        .risk-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+        .risk-loc { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+        .risk-score { font-weight: 800; font-size: 1.1rem; }
+
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-mark">🛣️</div>
+        <div>
+            <div class="brand-text">도(道)서관</div>
+            <div class="brand-sub">ADMIN PANEL</div>
+        </div>
+    </div>
+
+    <nav>
+        <div class="sidebar-section-label">Overview</div>
+        <button class="nav-item active" onclick="navigate('dashboard', this)">
+            <span class="nav-icon">📊</span> 대시보드
+        </button>
+
+        <div class="sidebar-section-label">Management</div>
+        <button class="nav-item" onclick="navigate('members', this)">
+            <span class="nav-icon">👤</span> 회원 관리
+            <span class="nav-badge">24</span>
+        </button>
+        <button class="nav-item" onclick="navigate('posts', this)">
+            <span class="nav-icon">💬</span> 게시글 관리
+            <span class="nav-badge red">3</span>
+        </button>
+        <button class="nav-item" onclick="navigate('files', this)">
+            <span class="nav-icon">📂</span> 파일 자료실
+        </button>
+        <button class="nav-item" onclick="navigate('risk', this)">
+            <span class="nav-icon">⚠️</span> AI 위험 예보
+        </button>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="admin-profile">
+            <div class="admin-avatar">관</div>
+            <div class="admin-info">
+                <div class="name">최고 관리자</div>
+                <div class="role">Super Admin</div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-title" id="topbar-title">📊 대시보드</div>
+        <div class="topbar-actions">
+            <button class="topbar-btn" onclick="showToast('🔔 알림이 없습니다.')">🔔 알림</button>
+            <button class="topbar-btn primary" onclick="openModal('add')">+ 새로 추가</button>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- ===== DASHBOARD ===== -->
+        <div class="page active" id="page-dashboard">
+            <div class="section-title">오늘의 현황</div>
+            <div class="section-sub">2025년 7월 17일 기준 실시간 집계</div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">전체 회원</div>
+                    <div class="stat-value">{{ members|length }}</div>
+                    <div class="stat-change up">↑ 오늘 +{{ new_today }}명</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">신규 게시글</div>
+                    <div class="stat-value">87</div>
+                    <div class="stat-change up">↑ 어제 대비 +23%</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-label">신고 접수</div>
+                    <div class="stat-value">3</div>
+                    <div class="stat-change down">처리 대기 중</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-label">위험 구역 등록</div>
+                    <div class="stat-value">52</div>
+                    <div class="stat-change up">↑ 이번 주 +8</div>
+                </div>
+            </div>
+
+            <div class="grid-3-1">
+                <!-- 주간 게시글 차트 -->
+                <div class="panel">
+                    <div class="panel-head">
+                        <span class="panel-title">📈 주간 게시글 현황</span>
+                        <span style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">최근 7일</span>
+                    </div>
+                    <div class="chart-area">
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:60px"><div class="bar-tooltip">월 · 52건</div></div>
+                            <span class="bar-label">월</span>
+                        </div>
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:90px"><div class="bar-tooltip">화 · 78건</div></div>
+                            <span class="bar-label">화</span>
+                        </div>
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:70px"><div class="bar-tooltip">수 · 61건</div></div>
+                            <span class="bar-label">수</span>
+                        </div>
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:120px"><div class="bar-tooltip">목 · 104건</div></div>
+                            <span class="bar-label">목</span>
+                        </div>
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:100px"><div class="bar-tooltip">금 · 87건</div></div>
+                            <span class="bar-label">금</span>
+                        </div>
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:150px; background:var(--teal);"><div class="bar-tooltip">토 · 130건</div></div>
+                            <span class="bar-label">토</span>
+                        </div>
+                        <div class="bar-wrap">
+                            <div class="bar" style="height:130px"><div class="bar-tooltip">일 · 113건</div></div>
+                            <span class="bar-label">일</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 최근 알림 -->
+                <div class="panel">
+                    <div class="panel-head">
+                        <span class="panel-title">🔔 최근 알림</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="alert-item">
+                            <div class="alert-dot dot-red"></div>
+                            <div>
+                                <div class="alert-text">신고 게시글 처리 필요</div>
+                                <div class="alert-meta">3분 전</div>
+                            </div>
+                        </div>
+                        <div class="alert-item">
+                            <div class="alert-dot dot-orange"></div>
+                            <div>
+                                <div class="alert-text">신규 회원 가입 급증</div>
+                                <div class="alert-meta">18분 전</div>
+                            </div>
+                        </div>
+                        <div class="alert-item">
+                            <div class="alert-dot dot-teal"></div>
+                            <div>
+                                <div class="alert-text">AI 위험구역 5건 업데이트</div>
+                                <div class="alert-meta">1시간 전</div>
+                            </div>
+                        </div>
+                        <div class="alert-item">
+                            <div class="alert-dot dot-teal"></div>
+                            <div>
+                                <div class="alert-text">새 자료 업로드 승인 대기</div>
+                                <div class="alert-meta">3시간 전</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MEMBERS ===== -->
+        <!-- admin.html 회원 관리 탭 테이블 부분만 교체 -->
+<div class="tab-panel" id="tab-members">
+    <div class="page-hd"><h2>회원 관리</h2><p>전체 회원 목록 · 상태 변경 · 등급 조정</p></div>
+    <div class="fbar">
+        <input class="finput" type="text" placeholder="🔍 이름 또는 이메일 검색">
+        <select class="fsel">
+            <option>전체 상태</option>
+            <option>활성</option>
+            <option>비활성</option>
+        </select>
+        <select class="fsel">
+            <option>전체 등급</option>
+            <option>user</option>
+            <option>admin</option>
+        </select>
+        <button class="btn primary" onclick="openModal('member')">+ 추가</button>
+    </div>
+    <div class="panel">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>UID</th>
+                    <th>이름</th>
+                    <th>등급</th>
+                    <th>가입일</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td style="color:var(--muted);font-size:.78rem">{{ member['id'] }}</td>
+                    <td>{{ member['uid'] }}</td>
+                    <td><strong>{{ member['name'] }}</strong></td>
+                    <td>
+                        {% if member['role'] == 'admin' %}
+                            <span class="badge b-teal">admin</span>
+                        {% else %}
+                            <span class="badge b-gray">user</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--muted)">{{ member['created_at'].strftime('%Y.%m.%d') }}</td>
+                    <td>
+                        {% if member['active'] == 1 %}
+                            <span class="badge b-ok">활성</span>
+                        {% else %}
+                            <span class="badge b-bad">비활성</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn sm" onclick="toast('✏️ 수정 모드')">수정</button>
+                        <button class="btn sm red" onclick="toast('🚫 정지 처리됨')">정지</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;color:var(--muted);padding:30px">
+                        등록된 회원이 없습니다.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+        <!-- ===== POSTS ===== -->
+        <div class="page" id="page-posts">
+            <div class="section-title">게시글 / 커뮤니티 관리</div>
+            <div class="section-sub">신고 처리 · 노출 관리 · 공지 등록</div>
+
+            <div class="filter-bar">
+                <input class="search-input" type="text" placeholder="🔍 게시글 제목 또는 작성자 검색...">
+                <select class="filter-select">
+                    <option>전체 카테고리</option>
+                    <option>도(道)와주세요</option>
+                    <option>도(道)란도란</option>
+                    <option>공지</option>
+                </select>
+                <select class="filter-select">
+                    <option>전체 상태</option>
+                    <option>정상</option>
+                    <option>신고</option>
+                    <option>숨김</option>
+                </select>
+            </div>
+
+            <div class="panel">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>번호</th>
+                            <th>카테고리</th>
+                            <th>제목</th>
+                            <th>작성자</th>
+                            <th>작성일</th>
+                            <th>신고수</th>
+                            <th>상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="color:var(--text-muted);font-size:0.8rem;">#2041</td>
+                            <td><span class="badge badge-notice">공지</span></td>
+                            <td><strong>7월 서비스 업데이트 안내</strong></td>
+                            <td>관리자</td>
+                            <td style="color:var(--text-muted)">2025.07.16</td>
+                            <td>—</td>
+                            <td><span class="badge badge-active">정상</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('✏️ 게시글 수정 모드')">수정</button>
+                                <button class="action-btn danger" onclick="showToast('🗑️ 삭제되었습니다.')">삭제</button>
+                            </td>
+                        </tr>
+                        <tr class="row-new">
+                            <td style="color:var(--text-muted);font-size:0.8rem;">#2039</td>
+                            <td><span class="badge badge-review">도와주세요</span></td>
+                            <td><strong>이 교차로 진짜 너무 위험하지 않나요?</strong></td>
+                            <td>박지현</td>
+                            <td style="color:var(--text-muted)">2025.07.17</td>
+                            <td><span style="color:var(--danger);font-weight:800;">5</span></td>
+                            <td><span class="badge badge-banned">신고</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('👁 게시글 상세 보기')">상세</button>
+                                <button class="action-btn" onclick="showToast('✅ 신고 해제되었습니다.')">해제</button>
+                                <button class="action-btn danger" onclick="showToast('🚫 게시글이 숨김 처리되었습니다.')">숨김</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--text-muted);font-size:0.8rem;">#2038</td>
+                            <td><span class="badge badge-review">도란도란</span></td>
+                            <td><strong>비오는 날 방어운전 팁 공유해요</strong></td>
+                            <td>김도현</td>
+                            <td style="color:var(--text-muted)">2025.07.17</td>
+                            <td>0</td>
+                            <td><span class="badge badge-active">정상</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('👁 게시글 상세 보기')">상세</button>
+                                <button class="action-btn danger" onclick="showToast('🗑️ 삭제되었습니다.')">삭제</button>
+                            </td>
+                        </tr>
+                        <tr class="row-new">
+                            <td style="color:var(--text-muted);font-size:0.8rem;">#2037</td>
+                            <td><span class="badge badge-review">도와주세요</span></td>
+                            <td><strong>[광고성 글 의심] 블랙박스 추천...</strong></td>
+                            <td>unknown99</td>
+                            <td style="color:var(--text-muted)">2025.07.16</td>
+                            <td><span style="color:var(--danger);font-weight:800;">12</span></td>
+                            <td><span class="badge badge-banned">신고</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('👁 게시글 상세 보기')">상세</button>
+                                <button class="action-btn danger" onclick="showToast('🚫 숨김 처리 완료.')">숨김</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--text-muted);font-size:0.8rem;">#2030</td>
+                            <td><span class="badge badge-review">도란도란</span></td>
+                            <td><strong>초보 운전자를 위한 고속도로 진입 가이드</strong></td>
+                            <td>정예린</td>
+                            <td style="color:var(--text-muted)">2025.07.14</td>
+                            <td>0</td>
+                            <td><span class="badge badge-active">정상</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('📌 공지로 등록되었습니다.')">공지 등록</button>
+                                <button class="action-btn danger" onclick="showToast('🗑️ 삭제되었습니다.')">삭제</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== FILES ===== -->
+        <div class="page" id="page-files">
+            <div class="section-title">파일 자료실 관리</div>
+            <div class="section-sub">자료 승인 · 카테고리 분류 · 다운로드 통계</div>
+
+            <div class="filter-bar">
+                <input class="search-input" type="text" placeholder="🔍 파일명 또는 업로더 검색...">
+                <select class="filter-select">
+                    <option>전체 카테고리</option>
+                    <option>교통법규</option>
+                    <option>블랙박스 분석</option>
+                    <option>안전 가이드</option>
+                </select>
+                <select class="filter-select">
+                    <option>전체 상태</option>
+                    <option>승인됨</option>
+                    <option>대기 중</option>
+                </select>
+                <button class="topbar-btn primary" onclick="openModal('file')">+ 파일 업로드</button>
+            </div>
+
+            <div class="panel">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>파일명</th>
+                            <th>카테고리</th>
+                            <th>업로더</th>
+                            <th>크기</th>
+                            <th>다운로드</th>
+                            <th>업로드일</th>
+                            <th>상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="row-new">
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="font-size:1.3rem;">📄</span>
+                                    <strong>2025 교통법규 개정 요약.pdf</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-notice">교통법규</span></td>
+                            <td>관리자</td>
+                            <td style="color:var(--text-muted)">2.4 MB</td>
+                            <td style="font-weight:700;">1,203</td>
+                            <td style="color:var(--text-muted)">2025.07.15</td>
+                            <td><span class="badge badge-active">승인됨</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('📥 다운로드 시작')">다운로드</button>
+                                <button class="action-btn danger" onclick="showToast('🗑️ 파일 삭제됨')">삭제</button>
+                            </td>
+                        </tr>
+                        <tr class="row-new">
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="font-size:1.3rem;">🎬</span>
+                                    <strong>블랙박스_분석_사례집_2025.zip</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-review">블랙박스</span></td>
+                            <td>김도현</td>
+                            <td style="color:var(--text-muted)">18.7 MB</td>
+                            <td style="font-weight:700;">—</td>
+                            <td style="color:var(--text-muted)">2025.07.17</td>
+                            <td><span class="badge badge-pending">대기 중</span></td>
+                            <td>
+                                <button class="action-btn" style="border-color:var(--teal);color:var(--teal);" onclick="showToast('✅ 승인되었습니다.')">승인</button>
+                                <button class="action-btn danger" onclick="showToast('❌ 거절되었습니다.')">거절</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="font-size:1.3rem;">📊</span>
+                                    <strong>야간 운전 안전 가이드북.pptx</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge" style="background:rgba(39,174,96,0.1);color:var(--success);">안전 가이드</span></td>
+                            <td>정예린</td>
+                            <td style="color:var(--text-muted)">5.1 MB</td>
+                            <td style="font-weight:700;">487</td>
+                            <td style="color:var(--text-muted)">2025.07.10</td>
+                            <td><span class="badge badge-active">승인됨</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('📥 다운로드 시작')">다운로드</button>
+                                <button class="action-btn danger" onclick="showToast('🗑️ 파일 삭제됨')">삭제</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="font-size:1.3rem;">📄</span>
+                                    <strong>도로교통법_전문_2024.pdf</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-notice">교통법규</span></td>
+                            <td>관리자</td>
+                            <td style="color:var(--text-muted)">8.9 MB</td>
+                            <td style="font-weight:700;">3,421</td>
+                            <td style="color:var(--text-muted)">2024.12.01</td>
+                            <td><span class="badge badge-active">승인됨</span></td>
+                            <td>
+                                <button class="action-btn" onclick="showToast('📥 다운로드 시작')">다운로드</button>
+                                <button class="action-btn danger" onclick="showToast('🗑️ 파일 삭제됨')">삭제</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== RISK ===== -->
+        <div class="page" id="page-risk">
+            <div class="section-title">AI 위험 예보 관리</div>
+            <div class="section-sub">위험 구역 등록 · 수정 · 위험도 조정</div>
+
+            <div class="filter-bar">
+                <input class="search-input" type="text" placeholder="🔍 지역명 또는 도로명 검색...">
+                <select class="filter-select">
+                    <option>전체 위험도</option>
+                    <option>높음</option>
+                    <option>중간</option>
+                    <option>낮음</option>
+                </select>
+                <button class="topbar-btn primary" onclick="openModal('risk')">+ 위험 구역 추가</button>
+            </div>
+
+            <div class="grid-2">
+                <div class="panel">
+                    <div class="panel-head">
+                        <span class="panel-title">🗺️ 등록된 위험 구역</span>
+                        <span style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">총 52건</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="risk-card">
+                            <div class="risk-icon" style="background:rgba(231,76,60,0.1);">🚨</div>
+                            <div class="risk-info">
+                                <div class="risk-name">경부고속도로 판교IC 합류 구간</div>
+                                <div class="risk-loc">경기 성남시 · 사고 다발 구역</div>
+                            </div>
+                            <span class="badge badge-high">높음</span>
+                            <div style="margin-left:8px;">
+                                <button class="action-btn" onclick="showToast('✏️ 구역 정보 수정')">수정</button>
+                            </div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-icon" style="background:rgba(243,156,18,0.1);">⚠️</div>
+                            <div class="risk-info">
+                                <div class="risk-name">서울외곽순환 청계IC 구간</div>
+                                <div class="risk-loc">서울 성동구 · 야간 주의 구역</div>
+                            </div>
+                            <span class="badge badge-medium">중간</span>
+                            <div style="margin-left:8px;">
+                                <button class="action-btn" onclick="showToast('✏️ 구역 정보 수정')">수정</button>
+                            </div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-icon" style="background:rgba(231,76,60,0.1);">🚨</div>
+                            <div class="risk-info">
+                                <div class="risk-name">영동대로 삼성역 사거리</div>
+                                <div class="risk-loc">서울 강남구 · 신호 위반 다발</div>
+                            </div>
+                            <span class="badge badge-high">높음</span>
+                            <div style="margin-left:8px;">
+                                <button class="action-btn" onclick="showToast('✏️ 구역 정보 수정')">수정</button>
+                            </div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-icon" style="background:rgba(39,174,96,0.1);">📍</div>
+                            <div class="risk-info">
+                                <div class="risk-name">분당-내곡 고속화도로 전구간</div>
+                                <div class="risk-loc">경기 성남 · 과속 감시 구역</div>
+                            </div>
+                            <span class="badge badge-low">낮음</span>
+                            <div style="margin-left:8px;">
+                                <button class="action-btn" onclick="showToast('✏️ 구역 정보 수정')">수정</button>
+                            </div>
+                        </div>
+                        <div class="risk-card">
+                            <div class="risk-icon" style="background:rgba(243,156,18,0.1);">⚠️</div>
+                            <div class="risk-info">
+                                <div class="risk-name">올림픽대로 강동구간 (빗길)</div>
+                                <div class="risk-loc">서울 강동구 · 우천 시 주의</div>
+                            </div>
+                            <span class="badge badge-medium">중간</span>
+                            <div style="margin-left:8px;">
+                                <button class="action-btn" onclick="showToast('✏️ 구역 정보 수정')">수정</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 위험도 통계 -->
+                <div style="display:flex;flex-direction:column;gap:20px;">
+                    <div class="panel">
+                        <div class="panel-head"><span class="panel-title">📊 위험도별 분포</span></div>
+                        <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+                            <div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                    <span style="font-size:0.82rem;font-weight:700;color:var(--danger);">🔴 높음</span>
+                                    <span style="font-size:0.82rem;font-weight:800;">18건</span>
+                                </div>
+                                <div style="background:#f1f3f4;border-radius:20px;height:8px;">
+                                    <div style="width:35%;height:100%;background:var(--danger);border-radius:20px;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                    <span style="font-size:0.82rem;font-weight:700;color:var(--warning);">🟡 중간</span>
+                                    <span style="font-size:0.82rem;font-weight:800;">24건</span>
+                                </div>
+                                <div style="background:#f1f3f4;border-radius:20px;height:8px;">
+                                    <div style="width:46%;height:100%;background:var(--warning);border-radius:20px;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                    <span style="font-size:0.82rem;font-weight:700;color:var(--success);">🟢 낮음</span>
+                                    <span style="font-size:0.82rem;font-weight:800;">10건</span>
+                                </div>
+                                <div style="background:#f1f3f4;border-radius:20px;height:8px;">
+                                    <div style="width:19%;height:100%;background:var(--success);border-radius:20px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head"><span class="panel-title">⚡ 빠른 액션</span></div>
+                        <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+                            <button class="topbar-btn primary" style="width:100%;padding:12px;" onclick="showToast('🔄 AI 재분석을 요청했습니다.')">🤖 AI 위험도 재분석 실행</button>
+                            <button class="topbar-btn" style="width:100%;padding:12px;" onclick="showToast('📤 리포트가 내보내졌습니다.')">📤 위험구역 리포트 내보내기</button>
+                            <button class="topbar-btn" style="width:100%;padding:12px;" onclick="showToast('🔔 사용자에게 알림을 발송했습니다.')">🔔 전체 사용자 위험 알림 발송</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+    <div class="modal-box">
+        <div class="modal-title" id="modal-title">항목 추가</div>
+        <div id="modal-body">
+            <div class="modal-field">
+                <label class="modal-label">이름 / 제목</label>
+                <input class="modal-input" type="text" placeholder="입력하세요">
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">설명</label>
+                <input class="modal-input" type="text" placeholder="간단한 설명">
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">카테고리</label>
+                <select class="modal-input">
+                    <option>선택하세요</option>
+                    <option>일반</option>
+                    <option>우선</option>
+                    <option>중요</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="topbar-btn" onclick="closeModalDirect()">취소</button>
+            <button class="topbar-btn primary" onclick="saveModal()">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">
+    <span id="toast-msg">저장되었습니다.</span>
+</div>
+
+<script>
+    function navigate(page, btn) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('page-' + page).classList.add('active');
+        btn.classList.add('active');
+
+        const titles = {
+            dashboard: '📊 대시보드',
+            members: '👤 회원 관리',
+            posts: '💬 게시글 관리',
+            files: '📂 파일 자료실',
+            risk: '⚠️ AI 위험 예보'
+        };
+        document.getElementById('topbar-title').textContent = titles[page];
+    }
+
+    let toastTimer;
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toast-msg').textContent = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    function openModal(type) {
+        const titles = {
+            add: '+ 새로 추가',
+            member: '👤 회원 추가',
+            file: '📂 파일 업로드',
+            risk: '⚠️ 위험 구역 추가'
+        };
+        document.getElementById('modal-title').textContent = titles[type] || '추가';
+        document.getElementById('modal').classList.add('open');
+    }
+
+    function closeModal(e) {
+        if (e.target === document.getElementById('modal')) {
+            document.getElementById('modal').classList.remove('open');
+        }
+    }
+
+    function closeModalDirect() {
+        document.getElementById('modal').classList.remove('open');
+    }
+
+    function saveModal() {
+        document.getElementById('modal').classList.remove('open');
+        showToast('✅ 저장되었습니다.');
+    }
+</script>
+</body>
+</html>

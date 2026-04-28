@@ -4,6 +4,15 @@
 
 {% block style %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_model/model.css') }}">
+<style>
+    /* 비디오 플레이어 스타일 보정 */
+    #videoPlayer {
+        width: 100%;
+        height: 100%;
+        background: #000;
+        object-fit: contain;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -16,100 +25,104 @@
 
     <div class="row g-4 justify-content-center">
         <div class="col-lg-8">
-            <div class="video-box-main shadow-sm" id="streamContainer">
 
-                <!-- 이미지 분석용 -->
-                <img id="videoStream"
-                     src=""
-                     class="media-element"
-                     style="display:none;">
+            <ul class="nav nav-pills mb-3 justify-content-center" id="modeTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" id="tab-file" onclick="switchTab('file')">
+                        <i class="bi bi-folder2-open me-1"></i> 파일 분석
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-cam" onclick="switchTab('cam')">
+                        <i class="bi bi-camera-video me-1"></i> IP캠 실시간
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-webcam" onclick="switchTab('webcam')">
+                        <i class="bi bi-webcam me-1"></i> 웹캠 실시간
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-its" onclick="switchTab('its')">
+                        <i class="bi bi-pci-card me-1"></i> ITS CCTV
+                    </button>
+                </li>
+            </ul>
 
-                <!-- 영상 재생용 (분석 완료 후 표시) -->
-                <video id="videoPlayer"
-                       class="media-element"
-                       style="display:none;"
-                       playsinline
-                       controls>
-                </video>
+            <div class="video-box-main shadow-sm" id="streamContainer" style="position:relative; overflow:hidden; background:#f8f9fa;">
+                <img id="camFrame" class="media-element" style="display:none; width:100%; height:100%; object-fit:cover;">
+                <img id="webcamFrame" class="media-element" style="display:none; width:100%; height:100%; object-fit:cover;">
+                <img id="videoStream" src="" class="media-element" style="display:none;">
+                <img id="videoThumbnail" src="" class="media-element" style="display:none;">
+                
+                <video id="videoPlayer" class="media-element" style="display:none;" playsinline controls autoplay></video>
+                
+                <canvas id="overlayCanvas" style="position:absolute; top:0; left:0; pointer-events:none;"></canvas>
 
-                <!-- 분석 중 썸네일 -->
-                <img id="videoThumbnail"
-                     src=""
-                     class="media-element"
-                     style="display:none;">
-
-                <!-- 바운딩박스 캔버스 -->
-                <canvas id="overlayCanvas"></canvas>
-
-                <!-- 기본 안내 -->
-                <div id="placeholderUI" class="text-center">
+                <div id="placeholderUI" class="text-center d-flex flex-column align-items-center justify-content-center" style="height:100%;">
                     <i class="bi bi-camera-video text-muted" style="font-size: 3rem;"></i>
                     <p class="mt-3 text-muted">미리보기 영역</p>
                 </div>
 
-                <!-- 분석 중 오버레이 -->
-                <div id="analyzingOverlay"
-                     style="display:none; position:absolute; inset:0;
-                            background:rgba(0,0,0,0.55); z-index:30;
-                            align-items:center; justify-content:center;
-                            flex-direction:column; color:white; text-align:center;">
-                    <div class="spinner-border text-light mb-3"
-                         style="width:3rem; height:3rem;"></div>
+                <div id="analyzingOverlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.55); z-index:30; align-items:center; justify-content:center; flex-direction:column; color:white;">
+                    <div class="spinner-border text-light mb-3" style="width:3rem; height:3rem;"></div>
                     <p class="fw-bold fs-5 mb-1">AI 분석 중...</p>
-                    <p class="small opacity-75">잠시만 기다려 주세요</p>
                 </div>
             </div>
 
-            <div class="progress progress-custom shadow-sm">
-                <div id="analysisProgress"
-                     class="progress-bar progress-bar-striped progress-bar-animated"
-                     role="progressbar"
-                     style="width: 0%; background-color: #20828A;">
-                </div>
+            <div class="progress progress-custom shadow-sm mt-3">
+                <div id="analysisProgress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; background-color: #20828A;"></div>
             </div>
-            <p id="statusText" class="text-center mt-2 small text-muted">
-                <br>현재 분석 대기 중
-            </p>
+            <p id="statusText" class="text-center mt-2 small text-muted">현재 분석 대기 중</p>
 
-            <!-- 파일 첨부 / 분석 버튼 -->
-            <div class="info-card shadow-sm mt-4">
+            <div id="panel-file" class="info-card shadow-sm mt-4">
                 <form id="uploadForm">
-                    <input type="file" id="videoFile" class="d-none"
-                           accept="video/*, image/*" onclick="this.value=null;">
-
+                    <input type="file" id="videoFile" class="d-none" accept="video/*, image/*" onclick="this.value=null;">
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-teal flex-fill py-2"
-                                onclick="document.getElementById('videoFile').click()">
+                        <button type="button" class="btn btn-teal flex-fill py-2" onclick="document.getElementById('videoFile').click()">
                             <i class="bi bi-folder2-open me-2"></i> 파일 첨부
                         </button>
-
-                        <button type="submit" id="startBtn"
-                                class="btn btn-outline-secondary flex-fill py-2"
-                                disabled>
+                        <button type="submit" id="startBtn" class="btn btn-outline-secondary flex-fill py-2" disabled>
                             <i class="bi bi-play-fill me-1"></i> 분석 시작
                         </button>
                     </div>
-
-                    <!-- 분석 완료 후 표시 -->
-                    <div id="resultArea" style="display:none;">
-                        <hr class="my-3">
-                        <p class="text-success small text-center mb-2">
-                            <i class="bi bi-check-circle-fill me-1"></i>
-                            분석 결과가 자동 저장되었습니다.
-                        </p>
-                        <a id="savedLink" href="#" target="_blank"
-                           class="btn w-100 py-2"
-                           style="font-weight:600; color:#20828A;
-                                  border:2px solid #20828A; transition:0.3s;"
-                           onmouseover="this.style.backgroundColor='#20828A';
-                                        this.style.color='white';"
-                           onmouseout="this.style.backgroundColor='transparent';
-                                       this.style.color='#20828A';">
-                            <i class="bi bi-download me-2"></i> 결과 다운로드
-                        </a>
-                    </div>
                 </form>
             </div>
+
+            <div id="panel-cam" class="info-card shadow-sm mt-4" style="display:none;">
+                <div class="d-flex gap-2 mb-3">
+                    <button id="camStartBtn" class="btn btn-teal flex-fill py-2" onclick="startCam()">
+                        <i class="bi bi-camera-video me-2"></i> 스트리밍 시작
+                    </button>
+                    <button id="camStopBtn" class="btn btn-outline-danger flex-fill py-2" onclick="stopCam()" style="display:none;">
+                        <i class="bi bi-stop-fill me-1"></i> 중지
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-webcam" class="info-card shadow-sm mt-4" style="display:none;">
+                <div class="d-flex gap-2 mb-3">
+                    <button id="webcamStartBtn" class="btn btn-teal flex-fill py-2" onclick="startWebcam()">
+                        <i class="bi bi-webcam me-2"></i> 웹캠 시작
+                    </button>
+                    <button id="webcamStopBtn" class="btn btn-outline-danger flex-fill py-2" onclick="stopWebcam()" style="display:none;">
+                        <i class="bi bi-stop-fill me-1"></i> 중지
+                    </button>
+                </div>
+            </div>
+
+            <div id="panel-its" class="info-card shadow-sm mt-4" style="display:none;">
+                <div class="alert alert-info small mb-3">
+                    <i class="bi bi-info-circle me-1"></i> 국가교통정보센터 실시간 CCTV 데이터를 불러옵니다.
+                </div>
+                <div class="d-flex gap-2 mb-3">
+                    <button id="itsLoadBtn" class="btn btn-teal flex-fill py-2" onclick="loadITSCCTV()">
+                        <i class="bi bi-arrow-clockwise me-2"></i> CCTV 목록 불러오기
+                    </button>
+                </div>
+                <div id="cctvListArea" class="list-group overflow-auto" style="max-height: 200px; display:none;"></div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -117,5 +130,204 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/ai_model/model.js') }}"></script>
+<script>
+let socket = null;
+
+// 모든 미디어 요소 숨기기 공통 함수
+function hideAllMedia() {
+    document.getElementById('camFrame').style.display = 'none';
+    document.getElementById('webcamFrame').style.display = 'none';
+    document.getElementById('videoStream').style.display = 'none';
+    document.getElementById('videoPlayer').style.display = 'none';
+    document.getElementById('placeholderUI').style.display = 'none';
+    
+    // 비디오 정지
+    const player = document.getElementById('videoPlayer');
+    player.pause();
+    player.src = "";
+}
+
+function switchTab(mode) {
+    const tabs = ['file', 'cam', 'webcam', 'its'];
+    tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', mode === t);
+        document.getElementById(`panel-${t}`).style.display = mode === t ? '' : 'none';
+    });
+
+    hideAllMedia();
+    document.getElementById('placeholderUI').style.display = '';
+    
+    if (mode !== 'cam') stopCam();
+    if (mode !== 'webcam') stopWebcam();
+}
+
+function startCam() {
+    hideAllMedia();
+    document.getElementById('camFrame').style.display = 'block';
+    document.getElementById('camStartBtn').style.display = 'none';
+    document.getElementById('camStopBtn').style.display = '';
+    
+    socket = io();
+    socket.on('ai_frame', (data) => {
+        document.getElementById('camFrame').src = 'data:image/jpeg;base64,' + data.image;
+        document.getElementById('statusText').innerText = '🟢 실시간 AI 탐지 중';
+    });
+}
+
+function stopCam() {
+    if (socket) { socket.disconnect(); socket = null; }
+    document.getElementById('camStartBtn').style.display = '';
+    document.getElementById('camStopBtn').style.display = 'none';
+}
+
+function startWebcam() {
+    hideAllMedia();
+    document.getElementById('webcamFrame').style.display = 'block';
+    document.getElementById('webcamStartBtn').style.display = 'none';
+    document.getElementById('webcamStopBtn').style.display = '';
+
+    socket = io();
+    socket.emit('start_webcam');
+    socket.on('webcam_frame', (data) => {
+        document.getElementById('webcamFrame').src = 'data:image/jpeg;base64,' + data.image;
+    });
+}
+
+function stopWebcam() {
+    console.log("웹캠 중지 프로세스 시작...");
+
+    // 1. 서버로 전송하던 타이머(인터벌) 중지
+    if (webcamInterval) {
+        clearInterval(webcamInterval);
+        webcamInterval = null;
+        console.log("데이터 전송 중단 완료");
+    }
+    
+    // 2. ★ 핵심: 카메라 하드웨어 트랙 완전히 끄기 ★
+    if (videoHidden && videoHidden.srcObject) {
+        const tracks = videoHidden.srcObject.getTracks();
+        tracks.forEach(track => {
+            track.stop(); // 이 명령이 실제 카메라 하드웨어 전원을 끕니다.
+            console.log("카메라 트랙 정지됨: " + track.label);
+        });
+        videoHidden.srcObject = null;
+    }
+    
+    // 3. 소켓 연결 종료 및 정리
+    if (socket) {
+        socket.emit('stop_webcam'); // 서버에도 알림
+        socket.disconnect();
+        socket = null;
+    }
+    
+    // 4. UI 초기화
+    document.getElementById('webcamStartBtn').style.display = '';
+    document.getElementById('webcamStopBtn').style.display = 'none';
+    document.getElementById('webcamFrame').style.display = 'none'; 
+    document.getElementById('placeholderUI').style.display = ''; 
+    document.getElementById('statusText').innerText = "카메라 전원이 꺼졌습니다.";
+}
+
+async function loadITSCCTV() {
+    const listArea = document.getElementById('cctvListArea');
+    listArea.innerHTML = '<div class="text-center p-3"><div class="spinner-border spinner-border-sm"></div></div>';
+    listArea.style.display = '';
+
+    try {
+        const response = await fetch('/api/its/cctv'); 
+        const data = await response.json();
+        listArea.innerHTML = ''; 
+        
+        const items = data.data || (data.response && data.response.data) || [];
+        if (items.length > 0) {
+            items.forEach(cctv => {
+                const btn = document.createElement('button');
+                btn.className = 'list-group-item list-group-item-action small';
+                btn.innerText = `[${cctv.cctvname}] ${cctv.cctvdesc || ''}`;
+                btn.onclick = () => playITSVideo(cctv.cctvurl, cctv.cctvname);
+                listArea.appendChild(btn);
+            });
+            document.getElementById('statusText').innerText = '✅ CCTV 목록 로드 완료';
+        } else {
+            document.getElementById('statusText').innerText = '❌ 데이터를 찾을 수 없습니다.';
+        }
+    } catch (e) {
+        document.getElementById('statusText').innerText = '❌ ITS 연결 실패';
+    }
+}
+
+function playITSVideo(url, name) {
+    hideAllMedia();
+    const videoPlayer = document.getElementById('videoPlayer');
+    
+    videoPlayer.style.display = 'block';
+    videoPlayer.src = url;
+    videoPlayer.play().catch(e => console.log("자동재생 차단됨, 사용자 클릭 필요"));
+    
+    document.getElementById('statusText').innerText = `📺 [${name}] 모니터링 중`;
+}
+// ... (기존 변수들 위쪽 그대로 유지) ...
+
+// 전역 변수 선언
+let webcamInterval = null;
+const videoHidden = document.createElement('video'); 
+const canvasHidden = document.createElement('canvas');
+
+async function startWebcam() {
+    console.log("1. startWebcam 함수 호출됨"); // 브라우저 콘솔 확인용
+    
+    hideAllMedia();
+    document.getElementById('webcamFrame').style.display = 'block';
+    document.getElementById('webcamStartBtn').style.display = 'none';
+    document.getElementById('webcamStopBtn').style.display = '';
+
+    try {
+        // 1. 카메라 권한 요청
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log("2. 카메라 권한 획득 성공");
+        
+        videoHidden.srcObject = stream;
+        videoHidden.play();
+
+        // 2. 소켓 연결 확인
+        if (!socket || !socket.connected) {
+            socket = io();
+            console.log("3. 소켓 신규 연결 시도");
+        }
+
+        // 3. 반복 전송 타이머 시작
+        webcamInterval = setInterval(() => {
+            if (!socket || !socket.connected) return;
+
+            canvasHidden.width = 640;
+            canvasHidden.height = 480;
+            const ctx = canvasHidden.getContext('2d');
+            ctx.drawImage(videoHidden, 0, 0, 640, 480);
+            
+            const imageData = canvasHidden.toDataURL('image/jpeg', 0.5); // 용량 줄이기 위해 0.5 설정
+            
+            // 전송 시도
+            socket.emit('webcam_frame_transmit', { 
+                image: imageData,
+                target: "" 
+            });
+            // console.log("4. 프레임 전송 중..."); // 너무 많이 찍히면 주석 처리
+        }, 200); // 테스트를 위해 0.2초 간격으로 설정
+
+        // 4. 서버 결과 수신 리스너 등록 (한 번만 등록)
+        socket.off('webcam_result'); // 중복 등록 방지
+        socket.on('webcam_result', (data) => {
+            document.getElementById('webcamFrame').src = 'data:image/jpeg;base64,' + data.image;
+            document.getElementById('statusText').innerText = "🟢 AI 분석 중...";
+        });
+
+    } catch (err) {
+        console.error("카메라 에러:", err);
+        alert("카메라를 사용할 수 없습니다: " + err.message);
+        stopWebcam();
+    }
+}
+</script>
 {% endblock %}

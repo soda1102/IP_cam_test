@@ -1,7 +1,7 @@
 # src/repository/member_repository.py
 from typing import Optional
 from src.common.db import fetch_query, execute_query
-from src.domain.member import Member
+from src.domain.Member import Member
 
 
 class MemberRepository:

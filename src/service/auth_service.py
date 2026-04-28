@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Optional
 
-from src.domain.member import Member, is_old_enough
+from src.domain.Member import Member, is_old_enough
 from src.repository.member_repository import MemberRepository
 from src.common import log_system
 

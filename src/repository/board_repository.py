@@ -2,7 +2,7 @@
 from math import ceil
 from typing import Optional
 from src.common.db import fetch_query, execute_query
-from src.domain.board import Board
+from src.domain.Board import Board
 
 
 class BoardRepository:
